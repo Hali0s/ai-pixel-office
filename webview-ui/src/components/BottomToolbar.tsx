@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { WorkspaceFolder } from '../hooks/useExtensionMessages.js';
+import { useLocale } from '../hooks/useLocale.js';
 import { vscode } from '../vscodeApi.js';
 import { Button } from './ui/Button.js';
 import { Dropdown, DropdownItem } from './ui/Dropdown.js';
@@ -26,6 +27,8 @@ export function BottomToolbar({
   const [isBypassMenuOpen, setIsBypassMenuOpen] = useState(false);
   const folderPickerRef = useRef<HTMLDivElement>(null);
   const pendingBypassRef = useRef(false);
+  const { t } = useLocale();
+
   // Close folder picker / bypass menu on outside click
   useEffect(() => {
     if (!isFolderPickerOpen && !isBypassMenuOpen) return;
@@ -97,11 +100,11 @@ export function BottomToolbar({
               : 'bg-accent hover:bg-accent-bright'
           }
         >
-          + Agent
+          {t('addAgent')}
         </Button>
         <Dropdown isOpen={isBypassMenuOpen}>
           <DropdownItem onClick={() => handleBypassSelect(true)}>
-            Skip permissions mode <span className="text-2xs text-warning">⚠</span>
+            {t('skipPermissionsMode')} <span className="text-2xs text-warning">⚠</span>
           </DropdownItem>
         </Dropdown>
         <Dropdown isOpen={isFolderPickerOpen} className="min-w-128">
@@ -119,16 +122,16 @@ export function BottomToolbar({
       <Button
         variant={isEditMode ? 'active' : 'default'}
         onClick={onToggleEditMode}
-        title="Edit office layout"
+        title={t('editOfficeLayout')}
       >
-        Layout
+        {t('layout')}
       </Button>
       <Button
         variant={isSettingsOpen ? 'active' : 'default'}
         onClick={onToggleSettings}
-        title="Settings"
+        title={t('settings')}
       >
-        Settings
+        {t('settings')}
       </Button>
     </div>
   );

@@ -3,6 +3,9 @@ import { PALETTE_COUNT } from '../../constants.js';
 import { adjustSprite } from '../colorize.js';
 import type { Direction, SpriteData } from '../types.js';
 import { Direction as Dir } from '../types.js';
+
+/** Panda desaturation color settings: full greyscale + contrast boost */
+const PANDA_COLOR: ColorValue = { h: 0, s: -100, b: 0, c: 30, colorize: false };
 import bubblePermissionData from './bubble-permission.json';
 import bubbleWaitingData from './bubble-waiting.json';
 
@@ -64,6 +67,43 @@ export interface CharacterSprites {
 
 const spriteCache = new Map<string, CharacterSprites>();
 
+/** Apply panda (B&W) desaturation to every sprite in a CharacterSprites set */
+function pandaColorSprites(sprites: CharacterSprites): CharacterSprites {
+  const shift = (s: SpriteData) => adjustSprite(s, PANDA_COLOR);
+  const shiftWalk = (
+    arr: [SpriteData, SpriteData, SpriteData, SpriteData],
+  ): [SpriteData, SpriteData, SpriteData, SpriteData] => [
+    shift(arr[0]),
+    shift(arr[1]),
+    shift(arr[2]),
+    shift(arr[3]),
+  ];
+  const shiftPair = (arr: [SpriteData, SpriteData]): [SpriteData, SpriteData] => [
+    shift(arr[0]),
+    shift(arr[1]),
+  ];
+  return {
+    walk: {
+      [Dir.DOWN]: shiftWalk(sprites.walk[Dir.DOWN]),
+      [Dir.UP]: shiftWalk(sprites.walk[Dir.UP]),
+      [Dir.RIGHT]: shiftWalk(sprites.walk[Dir.RIGHT]),
+      [Dir.LEFT]: shiftWalk(sprites.walk[Dir.LEFT]),
+    } as Record<Direction, [SpriteData, SpriteData, SpriteData, SpriteData]>,
+    typing: {
+      [Dir.DOWN]: shiftPair(sprites.typing[Dir.DOWN]),
+      [Dir.UP]: shiftPair(sprites.typing[Dir.UP]),
+      [Dir.RIGHT]: shiftPair(sprites.typing[Dir.RIGHT]),
+      [Dir.LEFT]: shiftPair(sprites.typing[Dir.LEFT]),
+    } as Record<Direction, [SpriteData, SpriteData]>,
+    reading: {
+      [Dir.DOWN]: shiftPair(sprites.reading[Dir.DOWN]),
+      [Dir.UP]: shiftPair(sprites.reading[Dir.UP]),
+      [Dir.RIGHT]: shiftPair(sprites.reading[Dir.RIGHT]),
+      [Dir.LEFT]: shiftPair(sprites.reading[Dir.LEFT]),
+    } as Record<Direction, [SpriteData, SpriteData]>,
+  };
+}
+
 /** Apply hue shift to every sprite in a CharacterSprites set */
 function hueShiftSprites(sprites: CharacterSprites, hueShift: number): CharacterSprites {
   const color: ColorValue = { h: hueShift, s: 0, b: 0, c: 0 };
@@ -111,8 +151,13 @@ function emptySprite(w: number, h: number): SpriteData {
   return rows;
 }
 
-export function getCharacterSprites(paletteIndex: number, hueShift = 0): CharacterSprites {
-  const cacheKey = `${paletteIndex}:${hueShift}`;
+/** Clear the sprite cache (call after character customization changes) */
+export function clearCharacterSpriteCache(): void {
+  spriteCache.clear();
+}
+
+export function getCharacterSprites(paletteIndex: number, hueShift = 0, isPanda = false): CharacterSprites {
+  const cacheKey = `${paletteIndex}:${hueShift}:${isPanda ? 'panda' : ''}`;
   const cached = spriteCache.get(cacheKey);
   if (cached) return cached;
 
@@ -176,6 +221,11 @@ export function getCharacterSprites(paletteIndex: number, hueShift = 0): Charact
   // Apply hue shift if non-zero
   if (hueShift !== 0) {
     sprites = hueShiftSprites(sprites, hueShift);
+  }
+
+  // Apply panda (black & white) desaturation
+  if (isPanda) {
+    sprites = pandaColorSprites(sprites);
   }
 
   spriteCache.set(cacheKey, sprites);

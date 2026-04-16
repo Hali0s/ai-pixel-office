@@ -25,7 +25,7 @@ export interface VSCodeSession {
 }
 
 /**
- * Launch VS Code with the Pixel Agents extension loaded in development mode.
+ * Launch VS Code with the AI Pixel Office extension loaded in development mode.
  *
  * Uses an isolated temp HOME and injects the mock `claude` binary at the
  * front of PATH so no real Claude CLI is needed.

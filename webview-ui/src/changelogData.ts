@@ -21,7 +21,7 @@ export function toMajorMinor(version: string): string {
   return parts.length >= 2 ? `${parts[0]}.${parts[1]}` : version;
 }
 
-export const CHANGELOG_REPO_URL = 'https://github.com/pablodelucca/pixel-agents';
+export const CHANGELOG_REPO_URL = 'https://github.com/Hali0s/ai-pixel-office';
 
 export const changelogEntries: ChangelogEntry[] = [
   {
@@ -79,8 +79,8 @@ export const changelogEntries: ChangelogEntry[] = [
         description: 'Custom characters from external asset directories',
       },
       {
-        name: '@pablodelucca',
-        url: 'https://github.com/pablodelucca',
+        name: '@Hali0s',
+        url: 'https://github.com/Hali0s',
         description: 'Claude Code hooks integration, Tailwind v4 migration',
       },
       {

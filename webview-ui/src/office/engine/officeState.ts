@@ -711,6 +711,26 @@ export class OfficeState {
     ch.outputTokens = outputTokens;
   }
 
+  /** Update cosmetic customization for a character */
+  setCharacterCustomization(
+    id: number,
+    opts: {
+      customName?: string;
+      isPanda?: boolean;
+      gender?: string;
+      palette?: number;
+      hueShift?: number;
+    },
+  ): void {
+    const ch = this.characters.get(id);
+    if (!ch) return;
+    if (opts.customName !== undefined) ch.customName = opts.customName || undefined;
+    if (opts.isPanda !== undefined) ch.isPanda = opts.isPanda;
+    if (opts.gender !== undefined) ch.gender = opts.gender as Character['gender'];
+    if (opts.palette !== undefined) ch.palette = opts.palette;
+    if (opts.hueShift !== undefined) ch.hueShift = opts.hueShift;
+  }
+
   update(dt: number): void {
     // Furniture animation cycling
     const prevFrame = Math.floor(this.furnitureAnimTimer / FURNITURE_ANIM_INTERVAL_SEC);

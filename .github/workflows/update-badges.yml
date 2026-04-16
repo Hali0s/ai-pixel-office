@@ -8,7 +8,7 @@ on:
 jobs:
   update-badges:
     runs-on: ubuntu-latest
-    if: ${{ github.repository == 'pablodelucca/pixel-agents' }}
+    if: ${{ github.repository == 'Hali0s/ai-pixel-office' }}
 
     steps:
       - name: Fetch VS Code Marketplace stats
@@ -20,7 +20,7 @@ jobs:
             -H 'Accept: application/json;api-version=7.2-preview.1' \
             -d '{
               "filters": [{
-                "criteria": [{"filterType": 7, "value": "pablodelucca.pixel-agents"}]
+                "criteria": [{"filterType": 7, "value": "Hali0s.ai-pixel-office"}]
               }],
               "flags": 914
             }')
@@ -34,7 +34,7 @@ jobs:
       - name: Fetch Open VSX stats
         id: openvsx
         run: |
-          DOWNLOADS=$(curl -s 'https://open-vsx.org/api/pablodelucca/pixel-agents' | jq '.downloadCount // 0')
+          DOWNLOADS=$(curl -s 'https://open-vsx.org/api/Hali0s/ai-pixel-office' | jq '.downloadCount // 0')
           echo "downloads=$DOWNLOADS" >> "$GITHUB_OUTPUT"
 
       - name: Fetch GitHub Releases downloads

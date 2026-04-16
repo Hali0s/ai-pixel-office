@@ -196,4 +196,12 @@ export interface Character {
   inputTokens: number;
   /** Cumulative output tokens consumed */
   outputTokens: number;
+
+  // -- Character Customization --
+  /** Custom display name shown in overlay (overrides activity text label) */
+  customName?: string;
+  /** Render character in panda (black & white) mode */
+  isPanda?: boolean;
+  /** Gender cosmetic preference */
+  gender?: 'neutral' | 'female' | 'male';
 }

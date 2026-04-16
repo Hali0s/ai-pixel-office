@@ -147,7 +147,7 @@ export function renderScene(
 
   // Characters
   for (const ch of characters) {
-    const sprites = getCharacterSprites(ch.palette, ch.hueShift);
+    const sprites = getCharacterSprites(ch.palette, ch.hueShift, ch.isPanda);
     const spriteData = getCharacterSprite(ch, sprites);
     const cached = getCachedSprite(spriteData, zoom);
     // Sitting offset: shift character down when seated so they visually sit in the chair
@@ -200,6 +200,31 @@ export function renderScene(
       zY: charZY,
       draw: (c) => {
         c.drawImage(cached, drawX, drawY);
+
+        // Panda ears: two small rounded ears above the head
+        if (ch.isPanda && !ch.matrixEffect) {
+          const earR = Math.max(2, Math.round(2.5 * zoom));
+          const earY = drawY + Math.round(2 * zoom);
+          const earLX = drawX + Math.round(2.5 * zoom);
+          const earRX = drawX + cached.width - Math.round(2.5 * zoom);
+          // Outer ear (black)
+          c.fillStyle = '#0d0d0d';
+          c.beginPath();
+          c.arc(earLX, earY, earR, 0, Math.PI * 2);
+          c.fill();
+          c.beginPath();
+          c.arc(earRX, earY, earR, 0, Math.PI * 2);
+          c.fill();
+          // Inner ear (light grey)
+          const innerR = Math.max(1, Math.round(1.2 * zoom));
+          c.fillStyle = '#d0d0d0';
+          c.beginPath();
+          c.arc(earLX, earY, innerR, 0, Math.PI * 2);
+          c.fill();
+          c.beginPath();
+          c.arc(earRX, earY, innerR, 0, Math.PI * 2);
+          c.fill();
+        }
       },
     });
   }

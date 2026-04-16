@@ -61,7 +61,7 @@ async function ensurePanelIsLarge(window: Page): Promise<void> {
 
   await expect
     .poll(() => getPanelHeight(window), {
-      message: 'Expected the bottom panel to be resized for the Pixel Agents webview',
+      message: 'Expected the bottom panel to be resized for the AI Pixel Office webview',
       timeout: PANEL_OPEN_TIMEOUT_MS,
       intervals: [250, 500, 1000],
     })
@@ -69,11 +69,11 @@ async function ensurePanelIsLarge(window: Page): Promise<void> {
 }
 
 /**
- * Open the Pixel Agents panel via the Command Palette and wait for the
- * "Pixel Agents: Show Panel" command to execute.
+ * Open the AI Pixel Office panel via the Command Palette and wait for the
+ * "AI Pixel Office: Show Panel" command to execute.
  */
 export async function openPixelAgentsPanel(window: Page): Promise<void> {
-  await runCommand(window, 'Pixel Agents: Show Panel');
+  await runCommand(window, 'AI Pixel Office: Show Panel');
 
   // Wait for the panel container to appear
   await window
@@ -88,7 +88,7 @@ export async function openPixelAgentsPanel(window: Page): Promise<void> {
 }
 
 /**
- * Find and return the Pixel Agents webview frame.
+ * Find and return the AI Pixel Office webview frame.
  *
  * VS Code renders WebviewViewProvider content in an <iframe> whose URL
  * starts with "vscode-webview://". Because VS Code can have multiple
@@ -115,7 +115,7 @@ export async function getPixelAgentsFrame(window: Page): Promise<Frame> {
     await window.waitForTimeout(500);
   }
 
-  throw new Error('Timed out waiting for Pixel Agents webview frame with "+ Agent" button');
+  throw new Error('Timed out waiting for AI Pixel Office webview frame with "+ Agent" button');
 }
 
 /**

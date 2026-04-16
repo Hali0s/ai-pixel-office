@@ -115,6 +115,9 @@ export function useExtensionMessages(
       hueShift?: number;
       seatId?: string;
       folderName?: string;
+      customName?: string;
+      isPanda?: boolean;
+      gender?: string;
     }> = [];
 
     const handler = (e: MessageEvent) => {
@@ -139,6 +142,14 @@ export function useExtensionMessages(
         // Add buffered agents now that layout (and seats) are correct
         for (const p of pendingAgents) {
           os.addAgent(p.id, p.palette, p.hueShift, p.seatId, true, p.folderName);
+          // Restore character customization
+          if (p.customName !== undefined || p.isPanda !== undefined || p.gender !== undefined) {
+            os.setCharacterCustomization(p.id, {
+              customName: p.customName,
+              isPanda: p.isPanda,
+              gender: p.gender,
+            });
+          }
         }
         pendingAgents = [];
         layoutReadyRef.current = true;
@@ -209,7 +220,14 @@ export function useExtensionMessages(
         const incoming = msg.agents as number[];
         const meta = (msg.agentMeta || {}) as Record<
           number,
-          { palette?: number; hueShift?: number; seatId?: string }
+          {
+            palette?: number;
+            hueShift?: number;
+            seatId?: string;
+            customName?: string;
+            isPanda?: boolean;
+            gender?: string;
+          }
         >;
         const folderNames = (msg.folderNames || {}) as Record<number, string>;
         // Buffer agents — they'll be added in layoutLoaded after seats are built
@@ -221,6 +239,9 @@ export function useExtensionMessages(
             hueShift: m?.hueShift,
             seatId: m?.seatId,
             folderName: folderNames[id],
+            customName: m?.customName,
+            isPanda: m?.isPanda,
+            gender: m?.gender,
           });
         }
         setAgents((prev) => {

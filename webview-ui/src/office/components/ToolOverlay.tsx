@@ -159,6 +159,12 @@ export function ToolOverlay({
         const tokenRatio = totalTokens / MAX_CONTEXT_TOKENS;
         const hasExtraLines = !!(ch.folderName || teamRoleLabel);
 
+        // Character customization display
+        const pandaPrefix = ch.isPanda ? (ch.isTeamLead ? '🐼 ' : '🐼 ') : '';
+        const displayActivity = ch.customName
+          ? `${pandaPrefix}${ch.customName}`
+          : `${pandaPrefix}${activityText}`;
+
         return (
           <div
             key={id}
@@ -198,7 +204,7 @@ export function ToolOverlay({
                     fontStyle: isSub ? 'italic' : undefined,
                   }}
                 >
-                  {activityText}
+                  {displayActivity}
                 </span>
                 {ch.folderName && (
                   <span className="text-2xs leading-none overflow-hidden text-ellipsis block">

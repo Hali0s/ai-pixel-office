@@ -28,7 +28,7 @@ export function readConfig(): PixelAgentsConfig {
         : [],
     };
   } catch (err) {
-    console.error('[Pixel Agents] Failed to read config file:', err);
+    console.error('[AI Pixel Office] Failed to read config file:', err);
     return { ...DEFAULT_CONFIG };
   }
 }
@@ -45,6 +45,6 @@ export function writeConfig(config: PixelAgentsConfig): void {
     fs.writeFileSync(tmpPath, json, 'utf-8');
     fs.renameSync(tmpPath, filePath);
   } catch (err) {
-    console.error('[Pixel Agents] Failed to write config file:', err);
+    console.error('[AI Pixel Office] Failed to write config file:', err);
   }
 }

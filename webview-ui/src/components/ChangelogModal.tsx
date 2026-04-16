@@ -1,4 +1,5 @@
 import { CHANGELOG_REPO_URL, changelogEntries, toMajorMinor } from '../changelogData.ts';
+import { useLocale } from '../hooks/useLocale.js';
 import { Modal } from './ui/Modal.js';
 
 interface ChangelogModalProps {
@@ -10,6 +11,7 @@ interface ChangelogModalProps {
 export function ChangelogModal({ isOpen, onClose, currentVersion }: ChangelogModalProps) {
   const majorMinor = toMajorMinor(currentVersion);
   const entry = changelogEntries.find((e) => e.version === majorMinor) ?? changelogEntries[0];
+  const { t } = useLocale();
 
   if (!entry) return null;
 
@@ -17,7 +19,7 @@ export function ChangelogModal({ isOpen, onClose, currentVersion }: ChangelogMod
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={<span className="text-4xl">What's New in v{entry.version}</span>}
+      title={<span className="text-4xl">{t('whatsNew', { version: entry.version })}</span>}
       zIndex={51}
       className="min-w-sm!"
     >
@@ -39,7 +41,7 @@ export function ChangelogModal({ isOpen, onClose, currentVersion }: ChangelogMod
         {/* Contributors */}
         {entry.contributors.length > 0 && (
           <div className="mb-8">
-            <div className="text-lg text-accent-bright mb-4">Contributors</div>
+            <div className="text-lg text-accent-bright mb-4">{t('contributors')}</div>
             <ul className="m-0 pl-18 list-disc">
               {entry.contributors.map((c) => (
                 <li key={c.name} className="text-sm mb-2">
@@ -68,7 +70,7 @@ export function ChangelogModal({ isOpen, onClose, currentVersion }: ChangelogMod
           rel="noopener noreferrer"
           className="text-lg no-underline cursor-pointer transition-colors duration-200 hover:text-accent-bright"
         >
-          View on GitHub
+          {t('viewOnGitHub')}
         </a>
       </div>
     </Modal>

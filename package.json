@@ -1,12 +1,12 @@
 {
-  "name": "pixel-agents",
-  "displayName": "Pixel Agents",
-  "description": "Pixel art office where your Claude Code agents come to life as animated characters",
-  "version": "1.3.0",
-  "publisher": "pablodelucca",
+  "name": "ai-pixel-office",
+  "displayName": "AI Pixel Office",
+  "description": "A living pixel-art office where your AI agents come to life as animated characters — built for Claude Code",
+  "version": "1.4.0",
+  "publisher": "Hali0s",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pablodelucca/pixel-agents"
+    "url": "https://github.com/Hali0s/ai-pixel-office"
   },
   "icon": "icon.png",
   "license": "MIT",
@@ -21,29 +21,29 @@
   "contributes": {
     "commands": [
       {
-        "command": "pixel-agents.showPanel",
-        "title": "Pixel Agents: Show Panel"
+        "command": "ai-pixel-office.showPanel",
+        "title": "AI Pixel Office: Show Panel"
       },
       {
-        "command": "pixel-agents.exportDefaultLayout",
-        "title": "Pixel Agents: Export Layout as Default"
+        "command": "ai-pixel-office.exportDefaultLayout",
+        "title": "AI Pixel Office: Export Layout as Default"
       }
     ],
     "viewsContainers": {
       "panel": [
         {
-          "id": "pixel-agents-panel",
-          "title": "Pixel Agents",
+          "id": "ai-pixel-office-panel",
+          "title": "AI Pixel Office",
           "icon": "$(window)"
         }
       ]
     },
     "views": {
-      "pixel-agents-panel": [
+      "ai-pixel-office-panel": [
         {
           "type": "webview",
-          "id": "pixel-agents.panelView",
-          "name": "Pixel Agents"
+          "id": "ai-pixel-office.panelView",
+          "name": "AI Pixel Office"
         }
       ]
     }

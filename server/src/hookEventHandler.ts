@@ -9,7 +9,7 @@ import { HOOK_EVENT_BUFFER_MS, SESSION_END_GRACE_MS } from './constants.js';
 import type { AgentEvent, HookProvider } from './provider.js';
 import { getInlineTeammates, hasInlineTeammates } from './teamUtils.js';
 
-const debug = process.env.PIXEL_AGENTS_DEBUG !== '0';
+const debug = process.env.AI_PIXEL_OFFICE_DEBUG !== '0';
 
 /** Normalized hook event received from any provider's hook script via the HTTP server. */
 export interface HookEvent {
@@ -161,7 +161,7 @@ export class HookEventHandler {
       const cwd = event.cwd as string | undefined;
       const tracked = this.isTrackedSession(transcriptPath, cwd);
       if (debug && tracked)
-        console.log(`[Pixel Agents] Hook: SessionStart(source=${source}, session=${sid}...)`);
+        console.log(`[AI Pixel Office] Hook: SessionStart(source=${source}, session=${sid}...)`);
 
       // Check registered mapping
       const existingAgentId = this.sessionToAgentId.get(event.session_id);
@@ -172,7 +172,7 @@ export class HookEventHandler {
         }
         if (debug)
           console.log(
-            `[Pixel Agents] Hook: Agent ${existingAgentId} - SessionStart(source=${source}) known`,
+            `[AI Pixel Office] Hook: Agent ${existingAgentId} - SessionStart(source=${source}) known`,
           );
         return;
       }
@@ -183,7 +183,7 @@ export class HookEventHandler {
           agent.hookDelivered = true;
           if (debug)
             console.log(
-              `[Pixel Agents] Hook: Agent ${id} - SessionStart(source=${source}) auto-discovered`,
+              `[AI Pixel Office] Hook: Agent ${id} - SessionStart(source=${source}) auto-discovered`,
             );
           return;
         }
@@ -204,7 +204,7 @@ export class HookEventHandler {
             if (isMatch) {
               agent.pendingClear = false;
               console.log(
-                `[Pixel Agents] Hook: Agent ${id} - /${normEvent.source} detected, reassigning to ${event.session_id}`,
+                `[AI Pixel Office] Hook: Agent ${id} - /${normEvent.source} detected, reassigning to ${event.session_id}`,
               );
               this.sessionToAgentId.delete(agent.sessionId);
               this.registerAgent(event.session_id, id);
@@ -224,7 +224,7 @@ export class HookEventHandler {
         }
         if (debug && tracked)
           console.log(
-            `[Pixel Agents] Hook: SessionStart(source=${source}) -> pending external session ${sid}..., awaiting confirmation`,
+            `[AI Pixel Office] Hook: SessionStart(source=${source}) -> pending external session ${sid}..., awaiting confirmation`,
           );
         this.pendingExternalSessions.set(event.session_id, {
           sessionId: event.session_id,
@@ -234,7 +234,7 @@ export class HookEventHandler {
       } else {
         if (debug && tracked)
           console.log(
-            `[Pixel Agents] Hook: SessionStart -> unknown session ${sid}..., no transcript_path`,
+            `[AI Pixel Office] Hook: SessionStart -> unknown session ${sid}..., no transcript_path`,
           );
       }
       return;
@@ -246,7 +246,7 @@ export class HookEventHandler {
       this.pendingExternalSessions.delete(event.session_id);
       if (debug)
         console.log(
-          `[Pixel Agents] Hook: SessionEnd discarded pending external session ${event.session_id.slice(0, 8)}...`,
+          `[AI Pixel Office] Hook: SessionEnd discarded pending external session ${event.session_id.slice(0, 8)}...`,
         );
       return;
     }
@@ -257,7 +257,7 @@ export class HookEventHandler {
       this.pendingExternalSessions.delete(event.session_id);
       if (debug)
         console.log(
-          `[Pixel Agents] Hook: ${eventName} confirmed external session ${event.session_id.slice(0, 8)}..., creating agent`,
+          `[AI Pixel Office] Hook: ${eventName} confirmed external session ${event.session_id.slice(0, 8)}..., creating agent`,
         );
       this.lifecycleCallbacks.onExternalSessionDetected?.(
         pending.sessionId,
@@ -293,7 +293,7 @@ export class HookEventHandler {
       if (isPending || hasBuffered || hasUnregisteredAgents) {
         if (debug)
           console.log(
-            `[Pixel Agents] Hook: ${eventName} - unknown session ${event.session_id.slice(0, 8)}..., buffering`,
+            `[AI Pixel Office] Hook: ${eventName} - unknown session ${event.session_id.slice(0, 8)}..., buffering`,
           );
         this.bufferEvent(_providerId, event);
       }
@@ -306,7 +306,7 @@ export class HookEventHandler {
     agent.hookDelivered = true;
     if (debug)
       console.log(
-        `[Pixel Agents] Hook: Agent ${agentId} - ${eventName} (session=${event.session_id.slice(0, 8)}...)`,
+        `[AI Pixel Office] Hook: Agent ${agentId} - ${eventName} (session=${event.session_id.slice(0, 8)}...)`,
       );
 
     const webview = this.getWebview();
@@ -366,7 +366,7 @@ export class HookEventHandler {
     const reason = normEvent.reason;
     if (debug)
       console.log(
-        `[Pixel Agents] Hook: Agent ${agentId} - SessionEnd(reason=${reason ?? 'unknown'})`,
+        `[AI Pixel Office] Hook: Agent ${agentId} - SessionEnd(reason=${reason ?? 'unknown'})`,
       );
 
     // /clear and /resume send SessionEnd then SessionStart. Wait briefly for the follow-up.
@@ -378,7 +378,7 @@ export class HookEventHandler {
       this.markAgentWaiting(agent, agentId, webview);
       if (debug)
         console.log(
-          `[Pixel Agents] Hook: Agent ${agentId} - SessionEnd(reason=${reason}), awaiting possible SessionStart`,
+          `[AI Pixel Office] Hook: Agent ${agentId} - SessionEnd(reason=${reason}), awaiting possible SessionStart`,
         );
       // Safety net: if SessionStart never arrives, clean up the zombie agent
       setTimeout(() => {
@@ -508,7 +508,7 @@ export class HookEventHandler {
     if (this.provider.team && agent.currentHookIsTeammateSpawn === true && agent.teamName) {
       if (debug)
         console.log(
-          `[Pixel Agents] Hook: Agent ${agentId} - SubagentStart: teammate "${agentType}" detected, triggering discovery`,
+          `[AI Pixel Office] Hook: Agent ${agentId} - SubagentStart: teammate "${agentType}" detected, triggering discovery`,
         );
       this.lifecycleCallbacks.onTeammateDetected?.(agentId, event.session_id, agentType);
       return;
@@ -579,7 +579,7 @@ export class HookEventHandler {
     if (inlineTeammates.length > 0) {
       if (debug)
         console.log(
-          `[Pixel Agents] Hook: Agent ${agentId} - SubagentStop: marking inline teammates as waiting`,
+          `[AI Pixel Office] Hook: Agent ${agentId} - SubagentStop: marking inline teammates as waiting`,
         );
       for (const [id, a] of inlineTeammates) {
         this.markAgentWaiting(a, id, webview);
@@ -680,7 +680,7 @@ export class HookEventHandler {
       if (match) {
         const [id, a] = match;
         if (debug)
-          console.log(`[Pixel Agents] Hook: TeammateIdle "${agentType}" -> teammate Agent ${id}`);
+          console.log(`[AI Pixel Office] Hook: TeammateIdle "${agentType}" -> teammate Agent ${id}`);
         this.markAgentWaiting(a, id, webview);
         return;
       }
@@ -689,7 +689,7 @@ export class HookEventHandler {
     // Fallback: mark all inline teammates as waiting
     if (debug)
       console.log(
-        `[Pixel Agents] Hook: TeammateIdle (no agent_type match) -> marking ${inlineTeammates.length} teammate(s) waiting`,
+        `[AI Pixel Office] Hook: TeammateIdle (no agent_type match) -> marking ${inlineTeammates.length} teammate(s) waiting`,
       );
     for (const [id, a] of inlineTeammates) {
       this.markAgentWaiting(a, id, webview);
@@ -705,7 +705,7 @@ export class HookEventHandler {
     const agentType = this.provider.team?.extractTeammateNameFromEvent(event);
     if (debug)
       console.log(
-        `[Pixel Agents] Hook: Agent ${agentId} - TaskCompleted: ${subject}${agentType ? ` (agent_type=${agentType})` : ''}`,
+        `[AI Pixel Office] Hook: Agent ${agentId} - TaskCompleted: ${subject}${agentType ? ` (agent_type=${agentType})` : ''}`,
       );
 
     const inlineTeammates = getInlineTeammates(agentId, this.agents);
@@ -797,7 +797,7 @@ export class HookEventHandler {
     if (debug && toFlush.length > 0) {
       if (debug)
         console.log(
-          `[Pixel Agents] Hook: flushing ${toFlush.length} buffered event(s) for session ${sessionId.slice(0, 8)}...`,
+          `[AI Pixel Office] Hook: flushing ${toFlush.length} buffered event(s) for session ${sessionId.slice(0, 8)}...`,
         );
     }
     for (const { providerId, event } of toFlush) {

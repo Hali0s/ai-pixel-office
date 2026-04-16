@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toMajorMinor } from './changelogData.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { ChangelogModal } from './components/ChangelogModal.js';
+import { CharacterCustomizeModal } from './components/CharacterCustomizeModal.js';
 import { DebugView } from './components/DebugView.js';
 import { EditActionBar } from './components/EditActionBar.js';
 import { MigrationNotice } from './components/MigrationNotice.js';
@@ -10,6 +11,7 @@ import { SettingsModal } from './components/SettingsModal.js';
 import { Tooltip } from './components/Tooltip.js';
 import { Modal } from './components/ui/Modal.js';
 import { VersionIndicator } from './components/VersionIndicator.js';
+import { clearCharacterSpriteCache } from './office/sprites/spriteData.js';
 import { ZoomControls } from './components/ZoomControls.js';
 import { useEditorActions } from './hooks/useEditorActions.js';
 import { useEditorKeyboard } from './hooks/useEditorKeyboard.js';
@@ -83,6 +85,8 @@ function App() {
   const [hooksTooltipDismissed, setHooksTooltipDismissed] = useState(false);
   const [isDebugMode, setIsDebugMode] = useState(false);
   const [alwaysShowOverlay, setAlwaysShowOverlay] = useState(false);
+  const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
+  const [characterModalAgentId, setCharacterModalAgentId] = useState<number | null>(null);
 
   const currentMajorMinor = toMajorMinor(extensionVersion);
 
@@ -132,13 +136,65 @@ function App() {
     vscode.postMessage({ type: 'closeAgent', id });
   }, []);
 
+  // Open character customization modal on agent click (instead of directly focusing terminal)
   const handleClick = useCallback((agentId: number) => {
-    // If clicked agent is a sub-agent, focus the parent's terminal instead
+    setCharacterModalAgentId(agentId);
+    setIsCharacterModalOpen(true);
+  }, []);
+
+  // Focus terminal from inside the modal
+  const handleFocusTerminal = useCallback((agentId: number) => {
     const os = getOfficeState();
     const meta = os.subagentMeta.get(agentId);
     const focusId = meta ? meta.parentAgentId : agentId;
     vscode.postMessage({ type: 'focusAgent', id: focusId });
+    setIsCharacterModalOpen(false);
   }, []);
+
+  // Save character customization and persist
+  const handleCharacterSave = useCallback(
+    (
+      id: number,
+      opts: {
+        customName: string;
+        palette: number;
+        hueShift: number;
+        isPanda: boolean;
+        gender: string;
+      },
+    ) => {
+      const os = getOfficeState();
+      os.setCharacterCustomization(id, opts);
+      // Palette or panda mode changed — clear sprite cache so new sprites are generated
+      clearCharacterSpriteCache();
+      // Persist all agent customization to workspace state
+      const seats: Record<
+        number,
+        {
+          palette: number;
+          hueShift: number;
+          seatId: string | null;
+          customName?: string;
+          isPanda?: boolean;
+          gender?: string;
+        }
+      > = {};
+      for (const ch of os.characters.values()) {
+        if (ch.isSubagent) continue;
+        seats[ch.id] = {
+          palette: ch.palette,
+          hueShift: ch.hueShift,
+          seatId: ch.seatId,
+          customName: ch.customName,
+          isPanda: ch.isPanda,
+          gender: ch.gender,
+        };
+      }
+      vscode.postMessage({ type: 'saveAgentSeats', seats });
+      setIsCharacterModalOpen(false);
+    },
+    [],
+  );
 
   const officeState = getOfficeState();
 
@@ -295,14 +351,14 @@ function App() {
         zIndex={52}
       >
         <div className="text-base text-text px-10" style={{ lineHeight: 1.4 }}>
-          <p className="mb-8">Your Pixel Agents office now reacts in real-time:</p>
+          <p className="mb-8">Your AI Pixel Office office now reacts in real-time:</p>
           <ul className="mb-8 pl-18 list-disc m-0">
             <li className="text-sm mb-2">Permission prompts appear instantly</li>
             <li className="text-sm mb-2">Turn completions detected the moment they happen</li>
             <li className="text-sm mb-2">Sound notifications play immediately</li>
           </ul>
           <p className="mb-12 text-text-muted">
-            This works through Claude Code Hooks, small event listeners that notify Pixel Agents
+            This works through Claude Code Hooks, small event listeners that notify AI Pixel Office
             whenever something happens in your Claude sessions.
           </p>
           <div className="text-center">
@@ -366,6 +422,15 @@ function App() {
       {showMigrationNotice && (
         <MigrationNotice onDismiss={() => setMigrationNoticeDismissed(true)} />
       )}
+
+      <CharacterCustomizeModal
+        isOpen={isCharacterModalOpen}
+        agentId={characterModalAgentId}
+        officeState={officeState}
+        onClose={() => setIsCharacterModalOpen(false)}
+        onSave={handleCharacterSave}
+        onFocusTerminal={handleFocusTerminal}
+      />
     </div>
   );
 }

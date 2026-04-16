@@ -1,5 +1,8 @@
 import { useState } from 'react';
 
+import { useLocale } from '../hooks/useLocale.js';
+import type { Locale } from '../hooks/useLocale.js';
+import { localeNames } from '../i18n/index.js';
 import { isSoundEnabled, setSoundEnabled } from '../notificationSound.js';
 import { vscode } from '../vscodeApi.js';
 import { Button } from './ui/Button.js';
@@ -35,16 +38,17 @@ export function SettingsModal({
   onToggleHooksEnabled,
 }: SettingsModalProps) {
   const [soundLocal, setSoundLocal] = useState(isSoundEnabled);
+  const { locale, setLocale, t } = useLocale();
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Settings">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('settings')}>
       <MenuItem
         onClick={() => {
           vscode.postMessage({ type: 'openSessionsFolder' });
           onClose();
         }}
       >
-        Open Sessions Folder
+        {t('openSessionsFolder')}
       </MenuItem>
       <MenuItem
         onClick={() => {
@@ -52,7 +56,7 @@ export function SettingsModal({
           onClose();
         }}
       >
-        Export Layout
+        {t('exportLayout')}
       </MenuItem>
       <MenuItem
         onClick={() => {
@@ -60,7 +64,7 @@ export function SettingsModal({
           onClose();
         }}
       >
-        Import Layout
+        {t('importLayout')}
       </MenuItem>
       <MenuItem
         onClick={() => {
@@ -68,7 +72,7 @@ export function SettingsModal({
           onClose();
         }}
       >
-        Add Asset Directory
+        {t('addAssetDirectory')}
       </MenuItem>
       {externalAssetDirectories.map((dir) => (
         <div key={dir} className="flex items-center justify-between py-4 px-10 gap-8">
@@ -89,7 +93,7 @@ export function SettingsModal({
         </div>
       ))}
       <Checkbox
-        label="Sound Notifications"
+        label={t('soundNotifications')}
         checked={soundLocal}
         onChange={() => {
           const newVal = !isSoundEnabled();
@@ -99,21 +103,38 @@ export function SettingsModal({
         }}
       />
       <Checkbox
-        label="Watch All Sessions"
+        label={t('watchAllSessions')}
         checked={watchAllSessions}
         onChange={onToggleWatchAllSessions}
       />
       <Checkbox
-        label="Instant Detection (Hooks)"
+        label={t('instantDetection')}
         checked={hooksEnabled}
         onChange={onToggleHooksEnabled}
       />
       <Checkbox
-        label="Always Show Labels"
+        label={t('alwaysShowLabels')}
         checked={alwaysShowOverlay}
         onChange={onToggleAlwaysShowOverlay}
       />
-      <Checkbox label="Debug View" checked={isDebugMode} onChange={onToggleDebugMode} />
+      <Checkbox label={t('debugView')} checked={isDebugMode} onChange={onToggleDebugMode} />
+
+      {/* Language switcher */}
+      <div className="flex items-center justify-between py-4 px-10 gap-8">
+        <span className="text-sm">{t('language')}</span>
+        <div className="flex gap-2">
+          {(Object.keys(localeNames) as Locale[]).map((loc) => (
+            <Button
+              key={loc}
+              variant={locale === loc ? 'active' : 'default'}
+              size="sm"
+              onClick={() => setLocale(loc)}
+            >
+              {localeNames[loc]}
+            </Button>
+          ))}
+        </div>
+      </div>
     </Modal>
   );
 }

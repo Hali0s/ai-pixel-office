@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 
 import { COMMAND_EXPORT_DEFAULT_LAYOUT, COMMAND_SHOW_PANEL, VIEW_ID } from './constants.js';
-import { PixelAgentsViewProvider } from './PixelAgentsViewProvider.js';
+import { AiPixelOfficeViewProvider } from './AiPixelOfficeViewProvider.js';
 
-let providerInstance: PixelAgentsViewProvider | undefined;
+let providerInstance: AiPixelOfficeViewProvider | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
-  console.log(`[Pixel Agents] PIXEL_AGENTS_DEBUG=${process.env.PIXEL_AGENTS_DEBUG ?? 'not set'}`);
-  const provider = new PixelAgentsViewProvider(context);
+  console.log(`[AI Pixel Office] AI_PIXEL_OFFICE_DEBUG=${process.env.AI_PIXEL_OFFICE_DEBUG ?? 'not set'}`);
+  const provider = new AiPixelOfficeViewProvider(context);
   providerInstance = provider;
 
   context.subscriptions.push(vscode.window.registerWebviewViewProvider(VIEW_ID, provider));

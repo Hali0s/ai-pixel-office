@@ -11,7 +11,7 @@ import {
   SERVER_JSON_NAME,
 } from './constants.js';
 
-/** Discovery file written to ~/.pixel-agents/server.json so hook scripts can find the server. */
+/** Discovery file written to ~/.ai-pixel-office/server.json so hook scripts can find the server. */
 export interface ServerConfig {
   /** Port the HTTP server is listening on */
   port: number;
@@ -33,13 +33,13 @@ type HookEventCallback = (providerId: string, event: Record<string, unknown>) =>
  * - `POST /api/hooks/:providerId` -- hook event (auth required, 64KB body limit)
  * - `GET /api/health` -- health check (no auth)
  *
- * Discovery: writes `~/.pixel-agents/server.json` with port, PID, and auth token.
+ * Discovery: writes `~/.ai-pixel-office/server.json` with port, PID, and auth token.
  * Multi-window: second VS Code window detects running server via server.json and
  * reuses it (does not start a second server).
  *
  * This will becomes the standalone server with added WebSocket and SPA serving.
  */
-export class PixelAgentsServer {
+export class AiPixelOfficeServer {
   private server: http.Server | null = null;
   private config: ServerConfig | null = null;
   private ownsServer = false;
@@ -64,7 +64,7 @@ export class PixelAgentsServer {
       this.config = existing;
       this.ownsServer = false;
       console.log(
-        `[Pixel Agents] Reusing existing server on port ${existing.port} (PID ${existing.pid})`,
+        `[AI Pixel Office] Reusing existing server on port ${existing.port} (PID ${existing.pid})`,
       );
       return existing;
     }
@@ -95,9 +95,9 @@ export class PixelAgentsServer {
           // Replace startup error handler with runtime error handler
           this.server!.removeListener('error', reject);
           this.server!.on('error', (err) => {
-            console.error(`[Pixel Agents] Server: error: ${err}`);
+            console.error(`[AI Pixel Office] Server: error: ${err}`);
           });
-          console.log(`[Pixel Agents] Server: listening on 127.0.0.1:${addr.port}`);
+          console.log(`[AI Pixel Office] Server: listening on 127.0.0.1:${addr.port}`);
           resolve(this.config);
         } else {
           reject(new Error('Failed to get server address'));
@@ -212,7 +212,7 @@ export class PixelAgentsServer {
     });
   }
 
-  /** Returns the absolute path to ~/.pixel-agents/server.json. */
+  /** Returns the absolute path to ~/.ai-pixel-office/server.json. */
   private getServerJsonPath(): string {
     return path.join(os.homedir(), SERVER_JSON_DIR, SERVER_JSON_NAME);
   }
@@ -241,7 +241,7 @@ export class PixelAgentsServer {
       fs.writeFileSync(tmpPath, JSON.stringify(config, null, 2), { mode: 0o600 });
       fs.renameSync(tmpPath, filePath);
     } catch (e) {
-      console.error(`[Pixel Agents] Failed to write server.json: ${e}`);
+      console.error(`[AI Pixel Office] Failed to write server.json: ${e}`);
     }
   }
 

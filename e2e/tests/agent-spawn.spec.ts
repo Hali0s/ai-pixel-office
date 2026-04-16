@@ -1,5 +1,5 @@
 /**
- * E2E: Clicking "+ Agent" in the Pixel Agents webview spawns a mock Claude terminal.
+ * E2E: Clicking "+ Agent" in the AI Pixel Office webview spawns a mock Claude terminal.
  *
  * Assertions:
  *   1. The mock `claude` binary was invoked (invocations.log exists and is non-empty).
@@ -29,7 +29,7 @@ test('clicking + Agent spawns mock claude and creates a JSONL session file', asy
     // 1. Wait for VS Code workbench to be ready
     await waitForWorkbench(window);
 
-    // 2. Open the Pixel Agents panel
+    // 2. Open the AI Pixel Office panel
     await openPixelAgentsPanel(window);
 
     // 3. Find the webview frame and click + Agent

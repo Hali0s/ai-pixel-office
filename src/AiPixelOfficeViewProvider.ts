@@ -10,7 +10,7 @@ import {
   uninstallHooks,
 } from '../server/src/providers/hook/claude/claudeHookInstaller.js';
 import { claudeProvider, copyHookScript } from '../server/src/providers/index.js';
-import { PixelAgentsServer } from '../server/src/server.js';
+import { AiPixelOfficeServer } from '../server/src/server.js';
 import {
   getProjectDirPath,
   launchNewTerminal,
@@ -65,7 +65,7 @@ import { readLayoutFromFile, watchLayoutFile, writeLayoutToFile } from './layout
 import { setHookProvider } from './transcriptParser.js';
 import type { AgentState } from './types.js';
 
-export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
+export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
   nextAgentId = { current: 1 };
   nextTerminalIndex = { current: 1 };
   agents = new Map<number, AgentState>();
@@ -102,8 +102,8 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
   // Cross-window layout sync
   layoutWatcher: LayoutWatcher | null = null;
 
-  // Pixel Agents Server (hook event reception)
-  private pixelAgentsServer: PixelAgentsServer | null = null;
+  // AI Pixel Office Server (hook event reception)
+  private pixelAgentsServer: AiPixelOfficeServer | null = null;
   // ServerConfig is not stored as a field; use this.pixelAgentsServer?.getConfig() if needed.
   private hookEventHandler: HookEventHandler | null = null;
 
@@ -242,7 +242,7 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
       },
     });
 
-    this.pixelAgentsServer = new PixelAgentsServer();
+    this.pixelAgentsServer = new AiPixelOfficeServer();
     this.pixelAgentsServer.onHookEvent((providerId, event) => {
       this.hookEventHandler?.handleEvent(providerId, event as HookEvent);
     });
@@ -259,10 +259,10 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
           installHooks();
           copyHookScript(this.context.extensionPath);
         }
-        console.log(`[Pixel Agents] Server: ready on port ${config.port}`);
+        console.log(`[AI Pixel Office] Server: ready on port ${config.port}`);
       })
       .catch((e) => {
-        console.error(`[Pixel Agents] Failed to start server: ${e}`);
+        console.error(`[AI Pixel Office] Failed to start server: ${e}`);
       });
   }
 
@@ -271,7 +271,7 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
   private removeTeammate(teammateAgentId: number, source: string): void {
     const agent = this.agents.get(teammateAgentId);
     if (!agent) return;
-    console.log(`[Pixel Agents] Removing teammate ${teammateAgentId} (source: ${source})`);
+    console.log(`[AI Pixel Office] Removing teammate ${teammateAgentId} (source: ${source})`);
     dismissedJsonlFiles.set(agent.jsonlFile, Date.now());
     this.unregisterAgentHook(agent);
     removeAgent(
@@ -297,7 +297,7 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
     for (const id of teammates) {
       const agent = this.agents.get(id);
       if (agent) {
-        console.log(`[Pixel Agents] Removing teammate ${id} (lead ${leadId} closed)`);
+        console.log(`[AI Pixel Office] Removing teammate ${id} (lead ${leadId} closed)`);
         dismissedJsonlFiles.set(agent.jsonlFile, Date.now());
         this.unregisterAgentHook(agent);
         removeAgent(
@@ -396,7 +396,7 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
         }
       } else if (message.type === 'saveAgentSeats') {
         // Store seat assignments in a separate key (never touched by persistAgents)
-        console.log(`[Pixel Agents] State: saveAgentSeats:`, JSON.stringify(message.seats));
+        console.log(`[AI Pixel Office] State: saveAgentSeats:`, JSON.stringify(message.seats));
         this.context.workspaceState.update(WORKSPACE_KEY_AGENT_SEATS, message.seats);
       } else if (message.type === 'saveLayout') {
         this.layoutWatcher?.markOwnWrite();
@@ -414,10 +414,10 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
         if (enabled) {
           installHooks();
           copyHookScript(this.context.extensionPath);
-          console.log('[Pixel Agents] Hooks enabled by user');
+          console.log('[AI Pixel Office] Hooks enabled by user');
         } else {
           uninstallHooks();
-          console.log('[Pixel Agents] Hooks disabled by user');
+          console.log('[AI Pixel Office] Hooks disabled by user');
         }
       } else if (message.type === 'setHooksInfoShown') {
         this.context.globalState.update(GLOBAL_KEY_HOOKS_INFO_SHOWN, true);
@@ -532,7 +532,7 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
         // Ensure project scan runs even with no restored agents (to adopt external terminals)
         const projectDir = getProjectDirPath();
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        console.log(`[Pixel Agents] Debug: Platform: ${process.platform}, arch: ${process.arch}`);
+        console.log(`[AI Pixel Office] Debug: Platform: ${process.platform}, arch: ${process.arch}`);
         console.log('[Extension] workspaceRoot:', workspaceRoot);
         console.log('[Extension] projectDir:', projectDir);
         ensureProjectScan(
@@ -577,7 +577,7 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
               const folderProjectDir = getProjectDirPath(folder.uri.fsPath);
               if (folderProjectDir && folderProjectDir !== projectDir) {
                 console.log(
-                  `[Pixel Agents] Registering additional project dir: ${folderProjectDir}`,
+                  `[AI Pixel Office] Registering additional project dir: ${folderProjectDir}`,
                 );
                 ensureProjectScan(
                   folderProjectDir,
@@ -725,16 +725,16 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
       } else if (message.type === 'exportLayout') {
         const layout = readLayoutFromFile();
         if (!layout) {
-          vscode.window.showWarningMessage('Pixel Agents: No saved layout to export.');
+          vscode.window.showWarningMessage('AI Pixel Office: No saved layout to export.');
           return;
         }
         const uri = await vscode.window.showSaveDialog({
           filters: { 'JSON Files': ['json'] },
-          defaultUri: vscode.Uri.file(path.join(os.homedir(), 'pixel-agents-layout.json')),
+          defaultUri: vscode.Uri.file(path.join(os.homedir(), 'ai-pixel-office-layout.json')),
         });
         if (uri) {
           fs.writeFileSync(uri.fsPath, JSON.stringify(layout, null, 2), 'utf-8');
-          vscode.window.showInformationMessage('Pixel Agents: Layout exported successfully.');
+          vscode.window.showInformationMessage('AI Pixel Office: Layout exported successfully.');
         }
       } else if (message.type === 'addExternalAssetDirectory') {
         const uris = await vscode.window.showOpenDialog({
@@ -778,15 +778,15 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
           const raw = fs.readFileSync(uris[0].fsPath, 'utf-8');
           const imported = JSON.parse(raw) as Record<string, unknown>;
           if (imported.version !== 1 || !Array.isArray(imported.tiles)) {
-            vscode.window.showErrorMessage('Pixel Agents: Invalid layout file.');
+            vscode.window.showErrorMessage('AI Pixel Office: Invalid layout file.');
             return;
           }
           this.layoutWatcher?.markOwnWrite();
           writeLayoutToFile(imported);
           this.webview?.postMessage({ type: 'layoutLoaded', layout: imported });
-          vscode.window.showInformationMessage('Pixel Agents: Layout imported successfully.');
+          vscode.window.showInformationMessage('AI Pixel Office: Layout imported successfully.');
         } catch {
-          vscode.window.showErrorMessage('Pixel Agents: Failed to read or parse layout file.');
+          vscode.window.showErrorMessage('AI Pixel Office: Failed to read or parse layout file.');
         }
       }
     });
@@ -836,12 +836,12 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
   exportDefaultLayout(): void {
     const layout = readLayoutFromFile();
     if (!layout) {
-      vscode.window.showWarningMessage('Pixel Agents: No saved layout found.');
+      vscode.window.showWarningMessage('AI Pixel Office: No saved layout found.');
       return;
     }
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!workspaceRoot) {
-      vscode.window.showErrorMessage('Pixel Agents: No workspace folder found.');
+      vscode.window.showErrorMessage('AI Pixel Office: No workspace folder found.');
       return;
     }
     const assetsDir = path.join(workspaceRoot, 'webview-ui', 'public', 'assets');
@@ -863,7 +863,7 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
     const json = JSON.stringify(layout, null, 2);
     fs.writeFileSync(targetPath, json, 'utf-8');
     vscode.window.showInformationMessage(
-      `Pixel Agents: Default layout exported as revision ${nextRevision} to ${targetPath}`,
+      `AI Pixel Office: Default layout exported as revision ${nextRevision} to ${targetPath}`,
     );
   }
 
@@ -922,7 +922,7 @@ export class PixelAgentsViewProvider implements vscode.WebviewViewProvider {
   private startLayoutWatcher(): void {
     if (this.layoutWatcher) return;
     this.layoutWatcher = watchLayoutFile((layout) => {
-      console.log('[Pixel Agents] External layout change — pushing to webview');
+      console.log('[AI Pixel Office] External layout change — pushing to webview');
       this.webview?.postMessage({ type: 'layoutLoaded', layout });
     });
   }

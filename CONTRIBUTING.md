@@ -1,6 +1,6 @@
-# Contributing to Pixel Agents
+# Contributing to AI Pixel Office
 
-Thanks for your interest in contributing to Pixel Agents! All contributions are welcome — features, bug fixes, documentation improvements, refactors, and more.
+Thanks for your interest in contributing to AI Pixel Office! All contributions are welcome — features, bug fixes, documentation improvements, refactors, and more.
 
 This project is licensed under the [MIT License](LICENSE), so your contributions will be too. No CLA or DCO is required.
 
@@ -14,8 +14,8 @@ This project is licensed under the [MIT License](LICENSE), so your contributions
 ### Setup
 
 ```bash
-git clone https://github.com/pablodelucca/pixel-agents.git
-cd pixel-agents
+git clone https://github.com/Hali0s/ai-pixel-office.git
+cd ai-pixel-office
 npm install
 cd webview-ui && npm install && cd ..
 cd server && npm install && cd ..
@@ -86,7 +86,7 @@ The project uses a pixel art aesthetic. All overlays should use:
 - Hard offset shadows (`2px 2px 0px`, no blur) — use `var(--pixel-shadow)`
 - The FS Pixel Sans font (loaded in `index.css`)
 
-These conventions are enforced by custom ESLint rules (`eslint-rules/pixel-agents-rules.mjs`):
+These conventions are enforced by custom ESLint rules (`eslint-rules/ai-pixel-office-rules.mjs`):
 
 | Rule               | Scope               | What it checks                                              |
 | ------------------ | ------------------- | ----------------------------------------------------------- |
@@ -176,11 +176,11 @@ Each test runs with an isolated `HOME` and `--user-data-dir`, so no test state l
 
 ## Reporting Bugs
 
-[Open a bug report](https://github.com/pablodelucca/pixel-agents/issues/new?template=bug_report.yml) — the form will guide you through providing the details we need.
+[Open a bug report](https://github.com/Hali0s/ai-pixel-office/issues/new?template=bug_report.yml) — the form will guide you through providing the details we need.
 
 ## Feature Requests
 
-Have an idea? [Open a feature request](https://github.com/pablodelucca/pixel-agents/issues/new?template=feature_request.yml) — the form will guide you through describing the problem and your proposed solution. You can also browse and join ongoing conversations in [Discussions](https://github.com/pablodelucca/pixel-agents/discussions).
+Have an idea? [Open a feature request](https://github.com/Hali0s/ai-pixel-office/issues/new?template=feature_request.yml) — the form will guide you through describing the problem and your proposed solution. You can also browse and join ongoing conversations in [Discussions](https://github.com/Hali0s/ai-pixel-office/discussions).
 
 ## Security Issues
 

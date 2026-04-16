@@ -5,7 +5,7 @@ import * as path from 'path';
 import { HOOK_SCRIPTS_DIR } from '../../../constants.js';
 import { CLAUDE_HOOK_EVENTS, CLAUDE_HOOK_SCRIPT_NAME } from './constants.js';
 
-/** Marker string used to identify Pixel Agents hook entries in Claude's settings. */
+/** Marker string used to identify AI Pixel Office hook entries in Claude's settings. */
 const HOOK_SCRIPT_MARKER = CLAUDE_HOOK_SCRIPT_NAME;
 
 /** A single hook entry in Claude Code's ~/.claude/settings.json hooks config. */
@@ -29,7 +29,7 @@ function getClaudeSettingsPath(): string {
   return path.join(os.homedir(), '.claude', 'settings.json');
 }
 
-/** Returns the destination path for the hook script (~/.pixel-agents/hooks/claude-hook.js). */
+/** Returns the destination path for the hook script (~/.ai-pixel-office/hooks/claude-hook.js). */
 function getHookScriptPath(): string {
   return path.join(os.homedir(), HOOK_SCRIPTS_DIR, CLAUDE_HOOK_SCRIPT_NAME);
 }
@@ -42,7 +42,7 @@ function readClaudeSettings(): ClaudeSettings {
       return JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) as ClaudeSettings;
     }
   } catch (e) {
-    console.error(`[Pixel Agents] Failed to read Claude settings: ${e}`);
+    console.error(`[AI Pixel Office] Failed to read Claude settings: ${e}`);
   }
   return {};
 }
@@ -56,18 +56,18 @@ function writeClaudeSettings(settings: ClaudeSettings): void {
       fs.mkdirSync(dir, { recursive: true });
     }
     // Atomic write via tmp file + rename
-    const tmpPath = settingsPath + '.pixel-agents-tmp';
+    const tmpPath = settingsPath + '.ai-pixel-office-tmp';
     fs.writeFileSync(tmpPath, JSON.stringify(settings, null, 2), 'utf-8');
     fs.renameSync(tmpPath, settingsPath);
   } catch (e) {
-    console.error(`[Pixel Agents] Failed to write Claude settings: ${e}`);
+    console.error(`[AI Pixel Office] Failed to write Claude settings: ${e}`);
   }
 }
 
 /** Legacy script name (before rename to claude-hook.js). */
-const LEGACY_HOOK_MARKER = 'pixel-agents-hook.js';
+const LEGACY_HOOK_MARKER = 'ai-pixel-office-hook.js';
 
-/** Check if a hook entry belongs to Pixel Agents (current or legacy script name). */
+/** Check if a hook entry belongs to AI Pixel Office (current or legacy script name). */
 function isOurHookEntry(entry: ClaudeHookEntry): boolean {
   return entry.hooks.some(
     (h) => h.command.includes(HOOK_SCRIPT_MARKER) || h.command.includes(LEGACY_HOOK_MARKER),
@@ -94,7 +94,7 @@ function makeHookEntry(): ClaudeHookEntry {
   };
 }
 
-/** Check if Pixel Agents hooks are already installed in ~/.claude/settings.json. */
+/** Check if AI Pixel Office hooks are already installed in ~/.claude/settings.json. */
 export function areHooksInstalled(): boolean {
   const settings = readClaudeSettings();
   if (!settings.hooks) return false;
@@ -106,9 +106,9 @@ export function areHooksInstalled(): boolean {
 }
 
 /**
- * Install Pixel Agents hook entries into ~/.claude/settings.json for
+ * Install AI Pixel Office hook entries into ~/.claude/settings.json for
  * Notification, Stop, and PermissionRequest events. Idempotent: removes
- * any existing Pixel Agents entries before adding fresh ones.
+ * any existing AI Pixel Office entries before adding fresh ones.
  */
 export function installHooks(): void {
   const settings = readClaudeSettings();
@@ -124,7 +124,7 @@ export function installHooks(): void {
       settings.hooks[event] = [];
     }
     const entries = settings.hooks[event];
-    // Remove any existing Pixel Agents entries (in case script path changed)
+    // Remove any existing AI Pixel Office entries (in case script path changed)
     const filtered = entries.filter((e) => !isOurHookEntry(e));
     filtered.push(makeHookEntry());
     if (JSON.stringify(filtered) !== JSON.stringify(entries)) {
@@ -135,11 +135,11 @@ export function installHooks(): void {
 
   if (changed) {
     writeClaudeSettings(settings);
-    console.log('[Pixel Agents] Hooks installed in ~/.claude/settings.json');
+    console.log('[AI Pixel Office] Hooks installed in ~/.claude/settings.json');
   }
 }
 
-/** Remove all Pixel Agents hook entries from ~/.claude/settings.json. Cleans up empty objects. */
+/** Remove all AI Pixel Office hook entries from ~/.claude/settings.json. Cleans up empty objects. */
 export function uninstallHooks(): void {
   const settings = readClaudeSettings();
   if (!settings.hooks) return;
@@ -163,11 +163,11 @@ export function uninstallHooks(): void {
 
   if (changed) {
     writeClaudeSettings(settings);
-    console.log('[Pixel Agents] Hooks removed from ~/.claude/settings.json');
+    console.log('[AI Pixel Office] Hooks removed from ~/.claude/settings.json');
   }
 }
 
-/** Copy the shipped hook script from the extension to ~/.pixel-agents/hooks/ */
+/** Copy the shipped hook script from the extension to ~/.ai-pixel-office/hooks/ */
 export function copyHookScript(extensionPath: string): void {
   const src = path.join(extensionPath, 'dist', 'hooks', CLAUDE_HOOK_SCRIPT_NAME);
   const dst = getHookScriptPath();
@@ -178,13 +178,13 @@ export function copyHookScript(extensionPath: string): void {
       fs.mkdirSync(dstDir, { recursive: true, mode: 0o700 });
     }
     if (!fs.existsSync(src)) {
-      console.warn(`[Pixel Agents] Hook script not found at ${src}`);
+      console.warn(`[AI Pixel Office] Hook script not found at ${src}`);
       return;
     }
     fs.copyFileSync(src, dst);
     fs.chmodSync(dst, 0o700);
-    console.log(`[Pixel Agents] Hook script installed at ${dst}`);
+    console.log(`[AI Pixel Office] Hook script installed at ${dst}`);
   } catch (e) {
-    console.error(`[Pixel Agents] Failed to copy hook script: ${e}`);
+    console.error(`[AI Pixel Office] Failed to copy hook script: ${e}`);
   }
 }
