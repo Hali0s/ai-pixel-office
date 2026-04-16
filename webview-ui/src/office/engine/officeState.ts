@@ -720,6 +720,7 @@ export class OfficeState {
       gender?: string;
       palette?: number;
       hueShift?: number;
+      skipSpawnEffect?: boolean;
     },
   ): void {
     const ch = this.characters.get(id);
@@ -730,9 +731,12 @@ export class OfficeState {
     if (opts.palette !== undefined) ch.palette = opts.palette;
     if (opts.hueShift !== undefined) ch.hueShift = opts.hueShift;
     // Trigger spawn animation so the character re-materializes with new appearance
-    ch.matrixEffect = 'spawn';
-    ch.matrixEffectTimer = 0;
-    ch.matrixEffectSeeds = matrixEffectSeeds();
+    // (skip during initial restore — addAgent already handles the spawn effect)
+    if (!opts.skipSpawnEffect) {
+      ch.matrixEffect = 'spawn';
+      ch.matrixEffectTimer = 0;
+      ch.matrixEffectSeeds = matrixEffectSeeds();
+    }
   }
 
   update(dt: number): void {

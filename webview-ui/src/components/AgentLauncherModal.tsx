@@ -153,29 +153,31 @@ export function AgentLauncherModal({
           </div>
         )}
 
-        {/* Bypass permissions toggle */}
-        <label className="flex items-center gap-6 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={bypassPermissions}
-            onChange={(e) => setBypassPermissions(e.target.checked)}
-            className="w-12 h-12 accent-accent cursor-pointer"
-          />
-          <span className="text-sm text-text-muted">
-            Пропустить проверку прав{' '}
-            <span className="text-warning text-xs">⚠</span>
-          </span>
-        </label>
-
-        {/* Action buttons */}
+        {/* Action buttons + bypass permissions */}
         <div className="flex gap-6 pt-2">
           <Button variant="accent" size="md" onClick={handleLaunch} className="flex-1">
             Запустить
           </Button>
+          <button
+            onClick={() => setBypassPermissions((v) => !v)}
+            title="Пропустить все запросы разрешений (опасно)"
+            className={`px-8 py-4 text-sm border-2 rounded-none cursor-pointer transition-colors ${
+              bypassPermissions
+                ? 'border-warning bg-warning/10 text-warning'
+                : 'border-border bg-btn-bg text-text-muted hover:bg-btn-hover hover:border-warning'
+            }`}
+          >
+            ⚠ {bypassPermissions ? 'Без прав ON' : 'Без прав'}
+          </button>
           <Button variant="ghost" size="md" onClick={onClose}>
-            Отмена
+            ✕
           </Button>
         </div>
+        {bypassPermissions && (
+          <p className="text-xs text-warning/80 text-center -mt-4">
+            Агент будет запущен без запросов разрешений
+          </p>
+        )}
       </div>
     </Modal>
   );

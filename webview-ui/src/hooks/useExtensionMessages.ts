@@ -71,10 +71,27 @@ interface ExtensionMessageState {
 }
 
 function saveAgentSeats(os: OfficeState): void {
-  const seats: Record<number, { palette: number; hueShift: number; seatId: string | null }> = {};
+  const seats: Record<
+    number,
+    {
+      palette: number;
+      hueShift: number;
+      seatId: string | null;
+      customName?: string;
+      isPanda?: boolean;
+      gender?: string;
+    }
+  > = {};
   for (const ch of os.characters.values()) {
     if (ch.isSubagent) continue;
-    seats[ch.id] = { palette: ch.palette, hueShift: ch.hueShift, seatId: ch.seatId };
+    seats[ch.id] = {
+      palette: ch.palette,
+      hueShift: ch.hueShift,
+      seatId: ch.seatId,
+      customName: ch.customName,
+      isPanda: ch.isPanda,
+      gender: ch.gender,
+    };
   }
   vscode.postMessage({ type: 'saveAgentSeats', seats });
 }
@@ -145,12 +162,13 @@ export function useExtensionMessages(
         // Add buffered agents now that layout (and seats) are correct
         for (const p of pendingAgents) {
           os.addAgent(p.id, p.palette, p.hueShift, p.seatId, true, p.folderName);
-          // Restore character customization
+          // Restore character customization (no spawn effect — addAgent already handles it)
           if (p.customName !== undefined || p.isPanda !== undefined || p.gender !== undefined) {
             os.setCharacterCustomization(p.id, {
               customName: p.customName,
               isPanda: p.isPanda,
               gender: p.gender,
+              skipSpawnEffect: true,
             });
           }
         }
