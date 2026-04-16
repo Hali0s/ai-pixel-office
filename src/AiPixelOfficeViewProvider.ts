@@ -39,6 +39,7 @@ import {
 import { readConfig, writeConfig } from './configPersistence.js';
 import {
   GLOBAL_KEY_ALWAYS_SHOW_LABELS,
+  GLOBAL_KEY_BYPASS_PERMISSIONS,
   GLOBAL_KEY_HOOKS_ENABLED,
   GLOBAL_KEY_HOOKS_INFO_SHOWN,
   GLOBAL_KEY_LAST_SEEN_VERSION,
@@ -388,6 +389,9 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(async (message) => {
       if (message.type === 'openClaude') {
         const prevAgentIds = new Set(this.agents.keys());
+        // Global bypass setting takes precedence — if enabled, always skip permissions
+        const globalBypass = this.context.globalState.get<boolean>(GLOBAL_KEY_BYPASS_PERMISSIONS, false);
+        const bypass = globalBypass || (message.bypassPermissions as boolean | undefined);
         await launchNewTerminal(
           this.nextAgentId,
           this.nextTerminalIndex,
@@ -403,7 +407,7 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
           this.webview,
           this.persistAgents,
           message.folderPath as string | undefined,
-          message.bypassPermissions as boolean | undefined,
+          bypass,
           message.initialPrompt as string | undefined,
         );
         // Register newly created agent(s) with hook handler
@@ -474,6 +478,8 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
         }
       } else if (message.type === 'setHooksInfoShown') {
         this.context.globalState.update(GLOBAL_KEY_HOOKS_INFO_SHOWN, true);
+      } else if (message.type === 'setBypassPermissions') {
+        this.context.globalState.update(GLOBAL_KEY_BYPASS_PERMISSIONS, message.enabled as boolean);
       } else if (message.type === 'setWatchAllSessions') {
         const enabled = message.enabled as boolean;
         this.context.globalState.update(GLOBAL_KEY_WATCH_ALL_SESSIONS, enabled);
@@ -560,6 +566,10 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
           GLOBAL_KEY_HOOKS_INFO_SHOWN,
           false,
         );
+        const bypassPermissions = this.context.globalState.get<boolean>(
+          GLOBAL_KEY_BYPASS_PERMISSIONS,
+          false,
+        );
         const config = readConfig();
         this.webview?.postMessage({
           type: 'settingsLoaded',
@@ -570,6 +580,7 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
           alwaysShowLabels,
           hooksEnabled,
           hooksInfoShown,
+          bypassPermissions,
           externalAssetDirectories: config.externalAssetDirectories,
         });
 

@@ -22,6 +22,8 @@ interface SettingsModalProps {
   onToggleWatchAllSessions: () => void;
   hooksEnabled: boolean;
   onToggleHooksEnabled: () => void;
+  bypassPermissions: boolean;
+  onToggleBypassPermissions: () => void;
 }
 
 export function SettingsModal({
@@ -36,6 +38,8 @@ export function SettingsModal({
   onToggleWatchAllSessions,
   hooksEnabled,
   onToggleHooksEnabled,
+  bypassPermissions,
+  onToggleBypassPermissions,
 }: SettingsModalProps) {
   const [soundLocal, setSoundLocal] = useState(isSoundEnabled);
   const { locale, setLocale, t } = useLocale();
@@ -118,6 +122,11 @@ export function SettingsModal({
         onChange={onToggleAlwaysShowOverlay}
       />
       <Checkbox label={t('debugView')} checked={isDebugMode} onChange={onToggleDebugMode} />
+      <Checkbox
+        label={t('bypassPermissions')}
+        checked={bypassPermissions}
+        onChange={onToggleBypassPermissions}
+      />
 
       {/* Language switcher */}
       <div className="flex items-center justify-between py-4 px-10 gap-8">

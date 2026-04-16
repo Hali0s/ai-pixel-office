@@ -75,6 +75,8 @@ function App() {
     setHooksEnabled,
     hooksInfoShown,
     agentTemplates,
+    bypassPermissions,
+    setBypassPermissions,
   } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty);
 
   // Show migration notice once layout reset is detected
@@ -420,6 +422,12 @@ function App() {
           setHooksEnabled(newVal);
           vscode.postMessage({ type: 'setHooksEnabled', enabled: newVal });
         }}
+        bypassPermissions={bypassPermissions}
+        onToggleBypassPermissions={() => {
+          const newVal = !bypassPermissions;
+          setBypassPermissions(newVal);
+          vscode.postMessage({ type: 'setBypassPermissions', enabled: newVal });
+        }}
       />
 
       {showMigrationNotice && (
@@ -431,6 +439,7 @@ function App() {
         onClose={() => setIsLauncherOpen(false)}
         agentTemplates={agentTemplates}
         workspaceFolders={workspaceFolders}
+        defaultBypassPermissions={bypassPermissions}
       />
 
       <CharacterCustomizeModal

@@ -31,6 +31,9 @@ export const en = {
   yes: 'Yes',
   no: 'No',
 
+  // Agent launch
+  bypassPermissions: 'Skip Permissions (Dangerous)',
+
   // ChangelogModal
   whatsNew: "What's New in v{version}",
   contributors: 'Contributors',

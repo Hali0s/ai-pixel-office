@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { WorkspaceFolder } from '../hooks/useExtensionMessages.js';
 import { vscode } from '../vscodeApi.js';
@@ -17,6 +17,7 @@ interface AgentLauncherModalProps {
   onClose: () => void;
   agentTemplates: AgentTemplate[];
   workspaceFolders: WorkspaceFolder[];
+  defaultBypassPermissions?: boolean;
 }
 
 export function AgentLauncherModal({
@@ -24,11 +25,17 @@ export function AgentLauncherModal({
   onClose,
   agentTemplates,
   workspaceFolders,
+  defaultBypassPermissions = false,
 }: AgentLauncherModalProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<AgentTemplate | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
-  const [bypassPermissions, setBypassPermissions] = useState(false);
+  const [bypassPermissions, setBypassPermissions] = useState(defaultBypassPermissions);
+
+  // Keep local state in sync when global setting changes
+  useEffect(() => {
+    setBypassPermissions(defaultBypassPermissions);
+  }, [defaultBypassPermissions]);
 
   const handleLaunch = () => {
     const prompt = customPrompt.trim() || (selectedTemplate?.prompt ?? '');

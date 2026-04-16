@@ -12,6 +12,7 @@ export const GLOBAL_KEY_ALWAYS_SHOW_LABELS = 'ai-pixel-office.alwaysShowLabels';
 export const GLOBAL_KEY_WATCH_ALL_SESSIONS = 'ai-pixel-office.watchAllSessions';
 export const GLOBAL_KEY_HOOKS_ENABLED = 'ai-pixel-office.hooksEnabled';
 export const GLOBAL_KEY_HOOKS_INFO_SHOWN = 'ai-pixel-office.hooksInfoShown';
+export const GLOBAL_KEY_BYPASS_PERMISSIONS = 'ai-pixel-office.bypassPermissions';
 
 // ── VS Code Identifiers ─────────────────────────────────────
 export const VIEW_ID = 'ai-pixel-office.panelView';

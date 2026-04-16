@@ -33,6 +33,9 @@ export const ru: Translations = {
   yes: 'Да',
   no: 'Нет',
 
+  // Agent launch
+  bypassPermissions: 'Без запросов разрешений ⚠',
+
   // ChangelogModal
   whatsNew: 'Что нового в v{version}',
   contributors: 'Участники',
