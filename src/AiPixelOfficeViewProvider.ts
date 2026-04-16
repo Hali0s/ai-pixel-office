@@ -315,6 +315,58 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  /** Scan .claude/agents/*.md for agent templates and send them to the webview */
+  sendAgentTemplates(): void {
+    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const homeDir = os.homedir();
+    const scanDirs = [
+      ...(workspaceRoot ? [path.join(workspaceRoot, '.claude', 'agents')] : []),
+      path.join(homeDir, '.claude', 'agents'),
+    ];
+
+    const templates: Array<{ name: string; description: string; prompt: string; source: string }> = [];
+    const seen = new Set<string>();
+
+    for (const dir of scanDirs) {
+      if (!fs.existsSync(dir)) continue;
+      let files: string[];
+      try {
+        files = fs.readdirSync(dir).filter((f) => f.endsWith('.md'));
+      } catch {
+        continue;
+      }
+      for (const file of files) {
+        if (seen.has(file)) continue;
+        seen.add(file);
+        try {
+          const content = fs.readFileSync(path.join(dir, file), 'utf8');
+          // Parse YAML frontmatter between --- delimiters
+          const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+          let name = path.basename(file, '.md');
+          let description = '';
+          let prompt = '';
+          if (fmMatch) {
+            const fm = fmMatch[1];
+            const body = fmMatch[2] ?? '';
+            const nameM = fm.match(/^name:\s*(.+)$/m);
+            const descM = fm.match(/^description:\s*(.+)$/m);
+            if (nameM) name = nameM[1].trim();
+            if (descM) description = descM[1].trim();
+            prompt = body.trim();
+          } else {
+            prompt = content.trim();
+          }
+          const source = dir.startsWith(homeDir) ? 'global' : 'workspace';
+          templates.push({ name, description, prompt, source });
+        } catch {
+          // Ignore unreadable files
+        }
+      }
+    }
+
+    this.webview?.postMessage({ type: 'agentTemplates', templates });
+  }
+
   /** Register an agent with the hook event handler for session->agent mapping.
    *  hookDelivered is NOT set here. It is set only in hookEventHandler.handleEvent()
    *  when an actual hook event arrives, preserving heuristic fallback for agents
@@ -352,6 +404,7 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
           this.persistAgents,
           message.folderPath as string | undefined,
           message.bypassPermissions as boolean | undefined,
+          message.initialPrompt as string | undefined,
         );
         // Register newly created agent(s) with hook handler
         for (const [id, agent] of this.agents) {
@@ -519,6 +572,9 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
           hooksInfoShown,
           externalAssetDirectories: config.externalAssetDirectories,
         });
+
+        // Send agent templates from .claude/agents/
+        this.sendAgentTemplates();
 
         // Send workspace folders to webview (only when multi-root)
         const wsFolders = vscode.workspace.workspaceFolders;

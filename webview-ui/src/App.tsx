@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { toMajorMinor } from './changelogData.js';
+import { AgentLauncherModal } from './components/AgentLauncherModal.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { ChangelogModal } from './components/ChangelogModal.js';
 import { CharacterCustomizeModal } from './components/CharacterCustomizeModal.js';
@@ -73,6 +74,7 @@ function App() {
     hooksEnabled,
     setHooksEnabled,
     hooksInfoShown,
+    agentTemplates,
   } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty);
 
   // Show migration notice once layout reset is detected
@@ -87,6 +89,7 @@ function App() {
   const [alwaysShowOverlay, setAlwaysShowOverlay] = useState(false);
   const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
   const [characterModalAgentId, setCharacterModalAgentId] = useState<number | null>(null);
+  const [isLauncherOpen, setIsLauncherOpen] = useState(false);
 
   const currentMajorMinor = toMajorMinor(extensionVersion);
 
@@ -221,7 +224,7 @@ function App() {
     })();
 
   if (!layoutReady) {
-    return <div className="w-full h-full flex items-center justify-center ">Loading...</div>;
+    return <div className="w-full h-full flex items-center justify-center ">Загрузка...</div>;
   }
 
   return (
@@ -320,7 +323,7 @@ function App() {
       {/* Hooks first-run tooltip */}
       {!hooksInfoShown && !hooksTooltipDismissed && (
         <Tooltip
-          title="Instant Detection Active"
+          title="Мгновенное обнаружение активно"
           position="top-right"
           onDismiss={() => {
             setHooksTooltipDismissed(true);
@@ -328,7 +331,7 @@ function App() {
           }}
         >
           <span className="text-sm text-text leading-none">
-            Your agents now respond in real-time.{' '}
+            Агенты реагируют в реальном времени.{' '}
             <span
               className="text-accent cursor-pointer underline"
               onClick={() => {
@@ -337,7 +340,7 @@ function App() {
                 vscode.postMessage({ type: 'setHooksInfoShown' });
               }}
             >
-              View more
+              Подробнее
             </span>
           </span>
         </Tooltip>
@@ -347,37 +350,37 @@ function App() {
       <Modal
         isOpen={isHooksInfoOpen}
         onClose={() => setIsHooksInfoOpen(false)}
-        title="Instant Detection is ON"
+        title="Мгновенное обнаружение включено"
         zIndex={52}
       >
         <div className="text-base text-text px-10" style={{ lineHeight: 1.4 }}>
-          <p className="mb-8">Your AI Pixel Office office now reacts in real-time:</p>
+          <p className="mb-8">Ваш AI Pixel Office теперь реагирует в реальном времени:</p>
           <ul className="mb-8 pl-18 list-disc m-0">
-            <li className="text-sm mb-2">Permission prompts appear instantly</li>
-            <li className="text-sm mb-2">Turn completions detected the moment they happen</li>
-            <li className="text-sm mb-2">Sound notifications play immediately</li>
+            <li className="text-sm mb-2">Запросы разрешений появляются мгновенно</li>
+            <li className="text-sm mb-2">Завершение хода определяется в ту же секунду</li>
+            <li className="text-sm mb-2">Звуковые уведомления воспроизводятся немедленно</li>
           </ul>
           <p className="mb-12 text-text-muted">
-            This works through Claude Code Hooks, small event listeners that notify AI Pixel Office
-            whenever something happens in your Claude sessions.
+            Работает через хуки Claude Code — небольшие обработчики событий, которые уведомляют
+            AI Pixel Office о происходящем в ваших сессиях.
           </p>
           <div className="text-center">
             <button
               onClick={() => setIsHooksInfoOpen(false)}
               className="py-4 px-20 text-lg bg-accent text-white border-2 border-accent rounded-none cursor-pointer shadow-pixel"
             >
-              Got it
+              Понятно
             </button>
           </div>
           <p className="mt-8 text-xs text-text-muted text-center">
-            To disable, go to Settings {'>'} Instant Detection
+            Отключить: Настройки {'>'} Мгновенное обнаружение
           </p>
         </div>
       </Modal>
 
       <BottomToolbar
         isEditMode={editor.isEditMode}
-        onOpenClaude={editor.handleOpenClaude}
+        onOpenLauncher={() => setIsLauncherOpen(true)}
         onToggleEditMode={editor.handleToggleEditMode}
         isSettingsOpen={isSettingsOpen}
         onToggleSettings={() => setIsSettingsOpen((v) => !v)}
@@ -422,6 +425,13 @@ function App() {
       {showMigrationNotice && (
         <MigrationNotice onDismiss={() => setMigrationNoticeDismissed(true)} />
       )}
+
+      <AgentLauncherModal
+        isOpen={isLauncherOpen}
+        onClose={() => setIsLauncherOpen(false)}
+        agentTemplates={agentTemplates}
+        workspaceFolders={workspaceFolders}
+      />
 
       <CharacterCustomizeModal
         isOpen={isCharacterModalOpen}

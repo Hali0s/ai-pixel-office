@@ -729,6 +729,10 @@ export class OfficeState {
     if (opts.gender !== undefined) ch.gender = opts.gender as Character['gender'];
     if (opts.palette !== undefined) ch.palette = opts.palette;
     if (opts.hueShift !== undefined) ch.hueShift = opts.hueShift;
+    // Trigger spawn animation so the character re-materializes with new appearance
+    ch.matrixEffect = 'spawn';
+    ch.matrixEffectTimer = 0;
+    ch.matrixEffectSeeds = matrixEffectSeeds();
   }
 
   update(dt: number): void {

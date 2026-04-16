@@ -149,7 +149,10 @@ export function renderScene(
   for (const ch of characters) {
     const sprites = getCharacterSprites(ch.palette, ch.hueShift, ch.isPanda);
     const spriteData = getCharacterSprite(ch, sprites);
-    const cached = getCachedSprite(spriteData, zoom);
+    // Panda orchestrators (team leads) render at 2× size as a visual distinction
+    const isPandaOrchestrator = ch.isPanda && ch.isTeamLead;
+    const renderZoom = isPandaOrchestrator ? zoom * 2 : zoom;
+    const cached = getCachedSprite(spriteData, renderZoom);
     // Sitting offset: shift character down when seated so they visually sit in the chair
     const sittingOffset = ch.state === CharacterState.TYPE ? CHARACTER_SITTING_OFFSET_PX : 0;
     // Anchor at bottom-center of character — round to integer device pixels
@@ -170,7 +173,7 @@ export function renderScene(
       drawables.push({
         zY: charZY,
         draw: (c) => {
-          renderMatrixEffect(c, mCh, mSpriteData, mDrawX, mDrawY, zoom);
+          renderMatrixEffect(c, mCh, mSpriteData, mDrawX, mDrawY, renderZoom);
         },
       });
       continue;
@@ -182,9 +185,9 @@ export function renderScene(
     if (isSelected || isHovered) {
       const outlineAlpha = isSelected ? SELECTED_OUTLINE_ALPHA : HOVERED_OUTLINE_ALPHA;
       const outlineData = getOutlineSprite(spriteData);
-      const outlineCached = getCachedSprite(outlineData, zoom);
-      const olDrawX = drawX - zoom; // 1 sprite-pixel offset, scaled
-      const olDrawY = drawY - zoom; // outline follows sitting offset via drawY
+      const outlineCached = getCachedSprite(outlineData, renderZoom);
+      const olDrawX = drawX - renderZoom; // 1 sprite-pixel offset, scaled
+      const olDrawY = drawY - renderZoom; // outline follows sitting offset via drawY
       drawables.push({
         zY: charZY - OUTLINE_Z_SORT_OFFSET, // sort just before character
         draw: (c) => {
@@ -203,10 +206,11 @@ export function renderScene(
 
         // Panda ears: two small rounded ears above the head
         if (ch.isPanda && !ch.matrixEffect) {
-          const earR = Math.max(2, Math.round(2.5 * zoom));
-          const earY = drawY + Math.round(2 * zoom);
-          const earLX = drawX + Math.round(2.5 * zoom);
-          const earRX = drawX + cached.width - Math.round(2.5 * zoom);
+          const earScale = isPandaOrchestrator ? renderZoom : zoom;
+          const earR = Math.max(2, Math.round(2.5 * earScale));
+          const earY = drawY + Math.round(2 * earScale);
+          const earLX = drawX + Math.round(2.5 * earScale);
+          const earRX = drawX + cached.width - Math.round(2.5 * earScale);
           // Outer ear (black)
           c.fillStyle = '#0d0d0d';
           c.beginPath();
@@ -216,7 +220,7 @@ export function renderScene(
           c.arc(earRX, earY, earR, 0, Math.PI * 2);
           c.fill();
           // Inner ear (light grey)
-          const innerR = Math.max(1, Math.round(1.2 * zoom));
+          const innerR = Math.max(1, Math.round(1.2 * earScale));
           c.fillStyle = '#d0d0d0';
           c.beginPath();
           c.arc(earLX, earY, innerR, 0, Math.PI * 2);
