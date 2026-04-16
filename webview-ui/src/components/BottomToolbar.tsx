@@ -9,6 +9,8 @@ interface BottomToolbarProps {
   isSettingsOpen: boolean;
   onToggleSettings: () => void;
   workspaceFolders: WorkspaceFolder[];
+  bypassPermissions: boolean;
+  onToggleBypassPermissions: () => void;
 }
 
 export function BottomToolbar({
@@ -17,6 +19,8 @@ export function BottomToolbar({
   onToggleEditMode,
   isSettingsOpen,
   onToggleSettings,
+  bypassPermissions,
+  onToggleBypassPermissions,
 }: BottomToolbarProps) {
   const { t } = useLocale();
 
@@ -29,6 +33,17 @@ export function BottomToolbar({
       >
         {t('addAgent')}
       </Button>
+      <button
+        onClick={onToggleBypassPermissions}
+        title={bypassPermissions ? 'Запросы разрешений ОТКЛЮЧЕНЫ — нажмите чтобы включить' : 'Включить режим без запросов разрешений'}
+        className={`px-6 py-4 text-sm border-2 rounded-none cursor-pointer transition-colors ${
+          bypassPermissions
+            ? 'border-warning text-warning bg-warning/10 hover:bg-warning/20'
+            : 'border-border text-text-muted bg-btn-bg hover:border-warning hover:text-warning'
+        }`}
+      >
+        ⚠
+      </button>
       <Button
         variant={isEditMode ? 'active' : 'default'}
         onClick={onToggleEditMode}

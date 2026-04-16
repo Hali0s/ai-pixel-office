@@ -387,6 +387,12 @@ function App() {
         isSettingsOpen={isSettingsOpen}
         onToggleSettings={() => setIsSettingsOpen((v) => !v)}
         workspaceFolders={workspaceFolders}
+        bypassPermissions={bypassPermissions}
+        onToggleBypassPermissions={() => {
+          const newVal = !bypassPermissions;
+          setBypassPermissions(newVal);
+          vscode.postMessage({ type: 'setBypassPermissions', enabled: newVal });
+        }}
       />
 
       <VersionIndicator
