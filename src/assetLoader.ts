@@ -382,17 +382,53 @@ export function sendFloorTilesToWebview(
 export interface LoadedCharacterSprites {
   /** Pre-colored characters, each with 7 frames per direction */
   characters: CharacterDirectionSprites[];
+  /** Female variants — same length as `characters`, if available */
+  female?: CharacterDirectionSprites[];
+  /** Male variants — same length as `characters`, if available */
+  male?: CharacterDirectionSprites[];
 }
 
 export function mergeCharacterSprites(
   a: LoadedCharacterSprites,
   b: LoadedCharacterSprites,
 ): LoadedCharacterSprites {
-  return { characters: [...a.characters, ...b.characters] };
+  const merged: LoadedCharacterSprites = { characters: [...a.characters, ...b.characters] };
+  if (a.female || b.female) {
+    merged.female = [...(a.female ?? []), ...(b.female ?? [])];
+  }
+  if (a.male || b.male) {
+    merged.male = [...(a.male ?? []), ...(b.male ?? [])];
+  }
+  return merged;
+}
+
+/**
+ * Try to load gender-variant sprites for each palette index.
+ * Looks for char_N_female.png / char_N_male.png alongside the neutral sprites.
+ * Returns undefined if none found.
+ */
+function loadGenderVariants(
+  charDir: string,
+  count: number,
+  suffix: 'female' | 'male',
+): CharacterDirectionSprites[] | undefined {
+  const variants: CharacterDirectionSprites[] = [];
+  for (let ci = 0; ci < count; ci++) {
+    const filePath = path.join(charDir, `char_${ci}_${suffix}.png`);
+    if (!fs.existsSync(filePath)) return undefined;
+    try {
+      const pngBuffer = fs.readFileSync(filePath);
+      variants.push(decodeCharacterPng(pngBuffer));
+    } catch {
+      return undefined;
+    }
+  }
+  return variants.length === count ? variants : undefined;
 }
 
 /**
  * Load pre-colored character sprites from assets/characters/ (6 PNGs, each 112×96).
+ * Also scans for char_N_female.png / char_N_male.png gender variants.
  * Each PNG has 3 direction rows (down, up, right) × 7 frames (16×32 each).
  */
 export async function loadCharacterSprites(
@@ -413,10 +449,19 @@ export async function loadCharacterSprites(
       characters.push(decodeCharacterPng(pngBuffer));
     }
 
+    const result: LoadedCharacterSprites = { characters };
+    const femaleVariants = loadGenderVariants(charDir, CHAR_COUNT, 'female');
+    const maleVariants = loadGenderVariants(charDir, CHAR_COUNT, 'male');
+    if (femaleVariants) result.female = femaleVariants;
+    if (maleVariants) result.male = maleVariants;
+
+    const genderInfo = [femaleVariants ? 'female' : '', maleVariants ? 'male' : '']
+      .filter(Boolean)
+      .join('+');
     console.log(
-      `[AssetLoader] ✅ Loaded ${characters.length} character sprites (${CHAR_FRAMES_PER_ROW} frames × 3 directions each)`,
+      `[AssetLoader] ✅ Loaded ${characters.length} character sprites (${CHAR_FRAMES_PER_ROW} frames × 3 directions each)${genderInfo ? ` + gender variants: ${genderInfo}` : ''}`,
     );
-    return { characters };
+    return result;
   } catch (err) {
     console.error(
       `[AssetLoader] ❌ Error loading character sprites: ${err instanceof Error ? err.message : err}`,
@@ -477,10 +522,16 @@ export async function loadExternalCharacterSprites(
       return null;
     }
 
+    const result: LoadedCharacterSprites = { characters };
+    const femaleVariants = loadGenderVariants(charDir, characters.length, 'female');
+    const maleVariants = loadGenderVariants(charDir, characters.length, 'male');
+    if (femaleVariants) result.female = femaleVariants;
+    if (maleVariants) result.male = maleVariants;
+
     console.log(
       `[AssetLoader] ✅ Loaded ${characters.length} external character sprites from ${externalRoot}`,
     );
-    return { characters };
+    return result;
   } catch (err) {
     console.error(
       `[AssetLoader] ❌ Error loading external character sprites: ${err instanceof Error ? err.message : err}`,
@@ -499,6 +550,8 @@ export function sendCharacterSpritesToWebview(
   webview.postMessage({
     type: 'characterSpritesLoaded',
     characters: charSprites.characters,
+    female: charSprites.female,
+    male: charSprites.male,
   });
   console.log(`📤 Sent ${charSprites.characters.length} character sprites to webview`);
 }

@@ -204,4 +204,14 @@ export interface Character {
   isPanda?: boolean;
   /** Gender cosmetic preference */
   gender?: 'neutral' | 'female' | 'male';
+
+  // -- Idle Activities --
+  /** What the character does while inactive at their seat */
+  idleActivity: 'none' | 'coffee' | 'sleep' | 'phone';
+  /** Animation frame index for the idle activity overlay (0-3) */
+  idleActivityFrame: number;
+  /** Time accumulator for idle activity animation */
+  idleActivityTimer: number;
+  /** Preferred idle activity; 'random' = pick randomly each rest cycle */
+  idlePreference?: 'random' | 'coffee' | 'sleep' | 'phone';
 }

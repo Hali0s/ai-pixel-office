@@ -1,4 +1,6 @@
 import {
+  IDLE_ACTIVITY_FRAME_SEC,
+  IDLE_ACTIVITY_FRAMES,
   SEAT_REST_MAX_SEC,
   SEAT_REST_MIN_SEC,
   TYPE_FRAME_DURATION_SEC,
@@ -86,7 +88,23 @@ export function createCharacter(
     matrixEffectSeeds: [],
     inputTokens: 0,
     outputTokens: 0,
+    idleActivity: 'none',
+    idleActivityFrame: 0,
+    idleActivityTimer: 0,
   };
+}
+
+/** Pick an idle activity for a character based on their preference */
+function pickIdleActivity(
+  pref: 'random' | 'coffee' | 'sleep' | 'phone' | undefined,
+): 'none' | 'coffee' | 'sleep' | 'phone' {
+  if (pref === 'coffee') return 'coffee';
+  if (pref === 'sleep') return 'sleep';
+  if (pref === 'phone') return 'phone';
+  // random or unset — 70% chance to do something
+  if (Math.random() > 0.7) return 'none';
+  const choices: Array<'coffee' | 'sleep' | 'phone'> = ['coffee', 'sleep', 'phone'];
+  return choices[Math.floor(Math.random() * choices.length)];
 }
 
 export function updateCharacter(
@@ -107,17 +125,36 @@ export function updateCharacter(
       }
       // If no longer active, stand up and start wandering (after seatTimer expires)
       if (!ch.isActive) {
+        // Animate idle activity overlay
+        if (ch.idleActivity !== 'none') {
+          ch.idleActivityTimer += dt;
+          if (ch.idleActivityTimer >= IDLE_ACTIVITY_FRAME_SEC) {
+            ch.idleActivityTimer -= IDLE_ACTIVITY_FRAME_SEC;
+            ch.idleActivityFrame = (ch.idleActivityFrame + 1) % IDLE_ACTIVITY_FRAMES;
+          }
+        }
         if (ch.seatTimer > 0) {
           ch.seatTimer -= dt;
           break;
         }
         ch.seatTimer = 0; // clear sentinel
+        // Leave the seat — clear idle activity
+        ch.idleActivity = 'none';
+        ch.idleActivityFrame = 0;
+        ch.idleActivityTimer = 0;
         ch.state = CharacterState.IDLE;
         ch.frame = 0;
         ch.frameTimer = 0;
         ch.wanderTimer = randomRange(WANDER_PAUSE_MIN_SEC, WANDER_PAUSE_MAX_SEC);
         ch.wanderCount = 0;
         ch.wanderLimit = randomInt(WANDER_MOVES_BEFORE_REST_MIN, WANDER_MOVES_BEFORE_REST_MAX);
+      } else {
+        // Became active — clear idle activity immediately
+        if (ch.idleActivity !== 'none') {
+          ch.idleActivity = 'none';
+          ch.idleActivityFrame = 0;
+          ch.idleActivityTimer = 0;
+        }
       }
       break;
     }
@@ -247,8 +284,13 @@ export function updateCharacter(
               // "turn just ended" — skip the long rest so idle transition is immediate
               if (ch.seatTimer < 0) {
                 ch.seatTimer = 0;
+                ch.idleActivity = 'none';
               } else {
                 ch.seatTimer = randomRange(SEAT_REST_MIN_SEC, SEAT_REST_MAX_SEC);
+                // Pick an idle activity for this rest period
+                ch.idleActivity = pickIdleActivity(ch.idlePreference);
+                ch.idleActivityFrame = 0;
+                ch.idleActivityTimer = 0;
               }
               ch.wanderCount = 0;
               ch.wanderLimit = randomInt(

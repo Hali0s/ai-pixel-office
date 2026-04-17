@@ -22,7 +22,13 @@ import {
   GHOST_VALID_TINT,
   GRID_LINE_COLOR,
   HOVERED_OUTLINE_ALPHA,
+  IDLE_OVERLAY_BOB_FREQ,
+  IDLE_OVERLAY_BOB_PX,
+  IDLE_OVERLAY_GAP_PX,
+  IDLE_OVERLAY_X_SHIFT_PX,
   OUTLINE_Z_SORT_OFFSET,
+  PANDA_EAR_INNER_COLOR,
+  PANDA_EAR_OUTER_COLOR,
   ROTATE_BUTTON_BG,
   SEAT_AVAILABLE_COLOR,
   SEAT_BUSY_COLOR,
@@ -39,6 +45,7 @@ import {
   BUBBLE_PERMISSION_SPRITE,
   BUBBLE_WAITING_SPRITE,
   getCharacterSprites,
+  getIdleActivitySprite,
 } from '../sprites/spriteData.js';
 import type {
   Character,
@@ -147,7 +154,7 @@ export function renderScene(
 
   // Characters
   for (const ch of characters) {
-    const sprites = getCharacterSprites(ch.palette, ch.hueShift, ch.isPanda);
+    const sprites = getCharacterSprites(ch.palette, ch.hueShift, ch.isPanda, ch.gender);
     const spriteData = getCharacterSprite(ch, sprites);
     // Panda orchestrators (team leads) render at 2× size as a visual distinction
     const isPandaOrchestrator = ch.isPanda && ch.isTeamLead;
@@ -204,6 +211,25 @@ export function renderScene(
       draw: (c) => {
         c.drawImage(cached, drawX, drawY);
 
+        // Idle activity overlay (coffee, sleep ZZZ, phone) — shown when inactive at seat
+        if (ch.idleActivity !== 'none' && !ch.isActive && ch.state === CharacterState.TYPE) {
+          const overlaySpriteData = getIdleActivitySprite(
+            ch.idleActivity as 'coffee' | 'sleep' | 'phone',
+            ch.idleActivityFrame,
+          );
+          const overlayCached = getCachedSprite(overlaySpriteData, zoom);
+          // Gentle vertical bob using sin(time × freq)
+          const bob =
+            Math.sin(ch.idleActivityTimer * IDLE_OVERLAY_BOB_FREQ) * IDLE_OVERLAY_BOB_PX * zoom;
+          const overlayX = Math.round(
+            drawX + cached.width / 2 - overlayCached.width / 2 + IDLE_OVERLAY_X_SHIFT_PX * zoom,
+          );
+          const overlayY = Math.round(
+            drawY - overlayCached.height - IDLE_OVERLAY_GAP_PX * zoom + bob,
+          );
+          c.drawImage(overlayCached, overlayX, overlayY);
+        }
+
         // Panda ears: two small rounded ears above the head
         if (ch.isPanda && !ch.matrixEffect) {
           const earScale = isPandaOrchestrator ? renderZoom : zoom;
@@ -212,7 +238,7 @@ export function renderScene(
           const earLX = drawX + Math.round(2.5 * earScale);
           const earRX = drawX + cached.width - Math.round(2.5 * earScale);
           // Outer ear (black)
-          c.fillStyle = '#0d0d0d';
+          c.fillStyle = PANDA_EAR_OUTER_COLOR;
           c.beginPath();
           c.arc(earLX, earY, earR, 0, Math.PI * 2);
           c.fill();
@@ -221,7 +247,7 @@ export function renderScene(
           c.fill();
           // Inner ear (light grey)
           const innerR = Math.max(1, Math.round(1.2 * earScale));
-          c.fillStyle = '#d0d0d0';
+          c.fillStyle = PANDA_EAR_INNER_COLOR;
           c.beginPath();
           c.arc(earLX, earY, innerR, 0, Math.PI * 2);
           c.fill();

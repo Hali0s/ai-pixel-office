@@ -1,12 +1,14 @@
 import * as vscode from 'vscode';
 
-import { COMMAND_EXPORT_DEFAULT_LAYOUT, COMMAND_SHOW_PANEL, VIEW_ID } from './constants.js';
 import { AiPixelOfficeViewProvider } from './AiPixelOfficeViewProvider.js';
+import { COMMAND_EXPORT_DEFAULT_LAYOUT, COMMAND_SHOW_PANEL, VIEW_ID } from './constants.js';
 
 let providerInstance: AiPixelOfficeViewProvider | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
-  console.log(`[AI Pixel Office] AI_PIXEL_OFFICE_DEBUG=${process.env.AI_PIXEL_OFFICE_DEBUG ?? 'not set'}`);
+  console.log(
+    `[AI Pixel Office] AI_PIXEL_OFFICE_DEBUG=${process.env.AI_PIXEL_OFFICE_DEBUG ?? 'not set'}`,
+  );
   const provider = new AiPixelOfficeViewProvider(context);
   providerInstance = provider;
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
-import { useLocale } from '../hooks/useLocale.js';
 import type { Locale } from '../hooks/useLocale.js';
+import { useLocale } from '../hooks/useLocale.js';
 import { localeNames } from '../i18n/index.js';
 import { isSoundEnabled, setSoundEnabled } from '../notificationSound.js';
 import { vscode } from '../vscodeApi.js';
@@ -13,8 +13,6 @@ import { Modal } from './ui/Modal.js';
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  isDebugMode: boolean;
-  onToggleDebugMode: () => void;
   alwaysShowOverlay: boolean;
   onToggleAlwaysShowOverlay: () => void;
   externalAssetDirectories: string[];
@@ -29,8 +27,6 @@ interface SettingsModalProps {
 export function SettingsModal({
   isOpen,
   onClose,
-  isDebugMode,
-  onToggleDebugMode,
   alwaysShowOverlay,
   onToggleAlwaysShowOverlay,
   externalAssetDirectories,
@@ -121,7 +117,6 @@ export function SettingsModal({
         checked={alwaysShowOverlay}
         onChange={onToggleAlwaysShowOverlay}
       />
-      <Checkbox label={t('debugView')} checked={isDebugMode} onChange={onToggleDebugMode} />
       <Checkbox
         label={t('bypassPermissions')}
         checked={bypassPermissions}

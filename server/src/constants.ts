@@ -57,3 +57,15 @@ export const HOOK_EVENT_BUFFER_MS = 5_000;
  *  the agent is cleaned up instead of staying as a zombie with pendingClear forever. */
 export const SESSION_END_GRACE_MS = 2000;
 export const MAX_HOOK_BODY_SIZE = 65_536; // 64KB
+
+// ── Windows Reliability ─────────────────────────────────────
+/** Watchdog: reset agent isWaiting after this duration of no activity (5 minutes) */
+export const AGENT_WATCHDOG_TIMEOUT_MS = 300_000; // 5 minutes
+/** Watchdog check interval */
+export const AGENT_WATCHDOG_INTERVAL_MS = 60_000; // 1 minute
+
+// ── Hook Server Reconnect ────────────────────────────────────
+/** Initial reconnect delay */
+export const HOOK_SERVER_RECONNECT_INITIAL_MS = 1_000;
+/** Maximum reconnect delay (exponential backoff cap) */
+export const HOOK_SERVER_RECONNECT_MAX_MS = 30_000;

@@ -721,6 +721,7 @@ export class OfficeState {
       palette?: number;
       hueShift?: number;
       skipSpawnEffect?: boolean;
+      idlePreference?: string;
     },
   ): void {
     const ch = this.characters.get(id);
@@ -730,6 +731,9 @@ export class OfficeState {
     if (opts.gender !== undefined) ch.gender = opts.gender as Character['gender'];
     if (opts.palette !== undefined) ch.palette = opts.palette;
     if (opts.hueShift !== undefined) ch.hueShift = opts.hueShift;
+    if (opts.idlePreference !== undefined) {
+      ch.idlePreference = opts.idlePreference as Character['idlePreference'];
+    }
     // Trigger spawn animation so the character re-materializes with new appearance
     // (skip during initial restore — addAgent already handles the spawn effect)
     if (!opts.skipSpawnEffect) {

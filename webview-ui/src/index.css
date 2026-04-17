@@ -37,6 +37,14 @@
   --color-status-success: #89d185;
   --color-status-error: var(--color-danger);
 
+  /* Hook server status indicator */
+  --color-status-ok: #4ade80;
+  --color-status-warn: #facc15;
+
+  /* Danger variants */
+  --color-danger-light: #f38ba8;
+  --color-danger-hover: #3d1a1a;
+
   /* Shadow */
   --shadow-pixel: 2px 2px 0px #0a0a14;
 

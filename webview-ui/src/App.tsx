@@ -5,14 +5,17 @@ import { AgentLauncherModal } from './components/AgentLauncherModal.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { ChangelogModal } from './components/ChangelogModal.js';
 import { CharacterCustomizeModal } from './components/CharacterCustomizeModal.js';
+import { ContextMenu } from './components/ContextMenu.js';
 import { DebugView } from './components/DebugView.js';
 import { EditActionBar } from './components/EditActionBar.js';
+import { HelpModal } from './components/HelpModal.js';
 import { MigrationNotice } from './components/MigrationNotice.js';
+import { RenameModal } from './components/RenameModal.js';
+import { SendMessageModal } from './components/SendMessageModal.js';
 import { SettingsModal } from './components/SettingsModal.js';
 import { Tooltip } from './components/Tooltip.js';
 import { Modal } from './components/ui/Modal.js';
 import { VersionIndicator } from './components/VersionIndicator.js';
-import { clearCharacterSpriteCache } from './office/sprites/spriteData.js';
 import { ZoomControls } from './components/ZoomControls.js';
 import { useEditorActions } from './hooks/useEditorActions.js';
 import { useEditorKeyboard } from './hooks/useEditorKeyboard.js';
@@ -23,6 +26,7 @@ import { EditorState } from './office/editor/editorState.js';
 import { EditorToolbar } from './office/editor/EditorToolbar.js';
 import { OfficeState } from './office/engine/officeState.js';
 import { isRotatable } from './office/layout/furnitureCatalog.js';
+import { clearCharacterSpriteCache } from './office/sprites/spriteData.js';
 import { EditTool } from './office/types.js';
 import { isBrowserRuntime } from './runtime.js';
 import { vscode } from './vscodeApi.js';
@@ -77,6 +81,7 @@ function App() {
     agentTemplates,
     bypassPermissions,
     setBypassPermissions,
+    hookServerStatus,
   } = useExtensionMessages(getOfficeState, editor.setLastSavedLayout, isEditDirty);
 
   // Show migration notice once layout reset is detected
@@ -85,13 +90,27 @@ function App() {
 
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isHooksInfoOpen, setIsHooksInfoOpen] = useState(false);
   const [hooksTooltipDismissed, setHooksTooltipDismissed] = useState(false);
-  const [isDebugMode, setIsDebugMode] = useState(false);
+  const [isDebugMode] = useState(false);
   const [alwaysShowOverlay, setAlwaysShowOverlay] = useState(false);
   const [isCharacterModalOpen, setIsCharacterModalOpen] = useState(false);
   const [characterModalAgentId, setCharacterModalAgentId] = useState<number | null>(null);
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    agentId: number;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Send message modal state
+  const [sendMessageAgentId, setSendMessageAgentId] = useState<number | null>(null);
+
+  // Rename modal state
+  const [renameAgentId, setRenameAgentId] = useState<number | null>(null);
 
   const currentMajorMinor = toMajorMinor(extensionVersion);
 
@@ -109,7 +128,6 @@ function App() {
     setAlwaysShowOverlay(alwaysShowLabels);
   }, [alwaysShowLabels]);
 
-  const handleToggleDebugMode = useCallback(() => setIsDebugMode((prev) => !prev), []);
   const handleToggleAlwaysShowOverlay = useCallback(() => {
     setAlwaysShowOverlay((prev) => {
       const newVal = !prev;
@@ -147,6 +165,62 @@ function App() {
     setIsCharacterModalOpen(true);
   }, []);
 
+  // Context menu on right-click over a character
+  const handleAgentContextMenu = useCallback((agentId: number, x: number, y: number) => {
+    setContextMenu({ agentId, x, y });
+  }, []);
+
+  const handleContextMenuClose = useCallback(() => setContextMenu(null), []);
+
+  // Context menu action: open send message modal
+  const handleContextMenuSendMessage = useCallback((agentId: number) => {
+    setSendMessageAgentId(agentId);
+  }, []);
+
+  // Context menu action: open customize modal
+  const handleContextMenuCustomize = useCallback((agentId: number) => {
+    setCharacterModalAgentId(agentId);
+    setIsCharacterModalOpen(true);
+  }, []);
+
+  // Context menu action: copy session ID
+  const handleContextMenuCopySessionId = useCallback((agentId: number) => {
+    const os = getOfficeState();
+    const ch = os.characters.get(agentId);
+    if (!ch) return;
+    // Session ID is stored in the agent's character; look it up from agents list
+    // We pass it via a custom postMessage since we don't have direct access here
+    vscode.postMessage({ type: 'getAgentSessionId', id: agentId });
+    // Fallback: copy agent id as string if no better data
+    void navigator.clipboard.writeText(String(agentId)).catch(() => undefined);
+  }, []);
+
+  // Context menu action: close/terminate agent
+  const handleContextMenuCloseAgent = useCallback((agentId: number) => {
+    vscode.postMessage({ type: 'closeAgent', id: agentId });
+  }, []);
+
+  // Context menu action: rename agent
+  const handleContextMenuRename = useCallback((agentId: number) => {
+    setRenameAgentId(agentId);
+  }, []);
+
+  // Send message handler
+  const handleSendMessage = useCallback((agentId: number, text: string) => {
+    vscode.postMessage({ type: 'sendAgentMessage', id: agentId, text });
+  }, []);
+
+  // Rename handler
+  const handleRename = useCallback((agentId: number, name: string) => {
+    const os = getOfficeState();
+    // Update display name in office state immediately
+    const ch = os.characters.get(agentId);
+    if (ch) {
+      ch.customName = name || undefined;
+    }
+    vscode.postMessage({ type: 'renameAgent', id: agentId, name });
+  }, []);
+
   // Focus terminal from inside the modal
   const handleFocusTerminal = useCallback((agentId: number) => {
     const os = getOfficeState();
@@ -166,6 +240,7 @@ function App() {
         hueShift: number;
         isPanda: boolean;
         gender: string;
+        idlePreference: string;
       },
     ) => {
       const os = getOfficeState();
@@ -182,6 +257,7 @@ function App() {
           customName?: string;
           isPanda?: boolean;
           gender?: string;
+          idlePreference?: string;
         }
       > = {};
       for (const ch of os.characters.values()) {
@@ -193,6 +269,7 @@ function App() {
           customName: ch.customName,
           isPanda: ch.isPanda,
           gender: ch.gender,
+          idlePreference: ch.idlePreference,
         };
       }
       vscode.postMessage({ type: 'saveAgentSeats', seats });
@@ -225,6 +302,20 @@ function App() {
       return false;
     })();
 
+  // Derive display name for send-message modal title
+  const sendMessageDisplayName = (() => {
+    if (sendMessageAgentId === null) return '';
+    const ch = officeState.characters.get(sendMessageAgentId);
+    return ch?.customName ?? ch?.agentName ?? `Агент #${sendMessageAgentId}`;
+  })();
+
+  // Derive current name for rename modal
+  const renameCurrentName = (() => {
+    if (renameAgentId === null) return '';
+    const ch = officeState.characters.get(renameAgentId);
+    return ch?.customName ?? '';
+  })();
+
   if (!layoutReady) {
     return <div className="w-full h-full flex items-center justify-center ">Загрузка...</div>;
   }
@@ -234,6 +325,7 @@ function App() {
       <OfficeCanvas
         officeState={officeState}
         onClick={handleClick}
+        onAgentContextMenu={handleAgentContextMenu}
         isEditMode={editor.isEditMode}
         editorState={editorState}
         onEditorTileAction={editor.handleEditorTileAction}
@@ -363,8 +455,8 @@ function App() {
             <li className="text-sm mb-2">Звуковые уведомления воспроизводятся немедленно</li>
           </ul>
           <p className="mb-12 text-text-muted">
-            Работает через хуки Claude Code — небольшие обработчики событий, которые уведомляют
-            AI Pixel Office о происходящем в ваших сессиях.
+            Работает через хуки Claude Code — небольшие обработчики событий, которые уведомляют AI
+            Pixel Office о происходящем в ваших сессиях.
           </p>
           <div className="text-center">
             <button
@@ -386,6 +478,7 @@ function App() {
         onToggleEditMode={editor.handleToggleEditMode}
         isSettingsOpen={isSettingsOpen}
         onToggleSettings={() => setIsSettingsOpen((v) => !v)}
+        onOpenHelp={() => setIsHelpOpen(true)}
         workspaceFolders={workspaceFolders}
         bypassPermissions={bypassPermissions}
         onToggleBypassPermissions={() => {
@@ -393,6 +486,7 @@ function App() {
           setBypassPermissions(newVal);
           vscode.postMessage({ type: 'setBypassPermissions', enabled: newVal });
         }}
+        hookServerStatus={hookServerStatus}
       />
 
       <VersionIndicator
@@ -411,8 +505,6 @@ function App() {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        isDebugMode={isDebugMode}
-        onToggleDebugMode={handleToggleDebugMode}
         alwaysShowOverlay={alwaysShowOverlay}
         onToggleAlwaysShowOverlay={handleToggleAlwaysShowOverlay}
         externalAssetDirectories={externalAssetDirectories}
@@ -456,6 +548,39 @@ function App() {
         onSave={handleCharacterSave}
         onFocusTerminal={handleFocusTerminal}
       />
+
+      {/* Context menu */}
+      {contextMenu !== null && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          agentId={contextMenu.agentId}
+          onClose={handleContextMenuClose}
+          onSendMessage={handleContextMenuSendMessage}
+          onCustomize={handleContextMenuCustomize}
+          onCopySessionId={handleContextMenuCopySessionId}
+          onCloseAgent={handleContextMenuCloseAgent}
+          onRename={handleContextMenuRename}
+        />
+      )}
+
+      {/* Send message modal */}
+      <SendMessageModal
+        agentId={sendMessageAgentId}
+        agentDisplayName={sendMessageDisplayName}
+        onClose={() => setSendMessageAgentId(null)}
+        onSend={handleSendMessage}
+      />
+
+      {/* Rename modal */}
+      <RenameModal
+        agentId={renameAgentId}
+        currentName={renameCurrentName}
+        onClose={() => setRenameAgentId(null)}
+        onRename={handleRename}
+      />
+
+      <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </div>
   );
 }

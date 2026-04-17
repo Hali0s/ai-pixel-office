@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { OfficeState } from '../office/engine/officeState.js';
-import { Modal } from './ui/Modal.js';
+import { getCachedSprite } from '../office/sprites/spriteCache.js';
+import { getCharacterSprites, getLoadedCharacterCount } from '../office/sprites/spriteData.js';
 import { Button } from './ui/Button.js';
+import { Modal } from './ui/Modal.js';
 
 interface CharacterCustomizeModalProps {
   isOpen: boolean;
@@ -17,26 +19,62 @@ interface CharacterCustomizeModalProps {
       hueShift: number;
       isPanda: boolean;
       gender: string;
+      idlePreference: string;
     },
   ) => void;
   onFocusTerminal: (id: number) => void;
 }
 
-/** Approximate display colors for each character palette (char_0 .. char_5) */
-const PALETTE_COLORS = [
-  '#E8A87C', // char_0 – warm skin
-  '#8BAED4', // char_1 – blue-cool
-  '#C5896B', // char_2 – tan
-  '#D4A8C8', // char_3 – lavender
-  '#96C5A0', // char_4 – sage
-  '#E8CC8A', // char_5 – golden
-];
+/** Mini sprite preview rendered on a canvas — shows the standing-down pose */
+function SpritePreview({
+  palette,
+  hueShift,
+  selected,
+  onClick,
+}: {
+  palette: number;
+  hueShift: number;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const ZOOM = 3;
 
-const GENDER_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'neutral', label: 'Нейтр' },
-  { value: 'female', label: 'Жен' },
-  { value: 'male', label: 'Муж' },
-];
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const sprites = getCharacterSprites(palette, hueShift, false);
+    // Use the standing frame (walk[DOWN][1] = neutral stand)
+    const frame = sprites.walk[0][1];
+    const cached = getCachedSprite(frame, ZOOM);
+    canvas.width = cached.width;
+    canvas.height = cached.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(cached, 0, 0);
+  }, [palette, hueShift]);
+
+  return (
+    <button
+      onClick={onClick}
+      title={`Персонаж ${palette + 1}`}
+      style={{
+        background: 'var(--pixel-bg)',
+        border: `2px solid ${selected ? 'var(--color-accent-bright)' : 'var(--color-border)'}`,
+        boxShadow: selected ? '0 0 0 1px var(--color-accent-bright)' : 'none',
+        padding: '4px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        imageRendering: 'pixelated',
+      }}
+    >
+      <canvas ref={canvasRef} style={{ imageRendering: 'pixelated', display: 'block' }} />
+    </button>
+  );
+}
 
 export function CharacterCustomizeModal({
   isOpen,
@@ -51,8 +89,7 @@ export function CharacterCustomizeModal({
   const [customName, setCustomName] = useState('');
   const [selectedPalette, setSelectedPalette] = useState(0);
   const [selectedHueShift, setSelectedHueShift] = useState(0);
-  const [isPanda, setIsPanda] = useState(false);
-  const [gender, setGender] = useState('neutral');
+  const [idlePreference, setIdlePreference] = useState<string>('random');
 
   // Reset form state whenever the modal opens for a (possibly different) agent
   const prevAgentId = useRef<number | null>(null);
@@ -63,8 +100,7 @@ export function CharacterCustomizeModal({
       setCustomName(c?.customName ?? '');
       setSelectedPalette(c?.palette ?? 0);
       setSelectedHueShift(c?.hueShift ?? 0);
-      setIsPanda(c?.isPanda ?? false);
-      setGender(c?.gender ?? 'neutral');
+      setIdlePreference(c?.idlePreference ?? 'random');
     }
     if (!isOpen) {
       prevAgentId.current = null;
@@ -73,7 +109,6 @@ export function CharacterCustomizeModal({
 
   if (!isOpen || agentId === null) return null;
 
-  const isTeamLead = ch?.isTeamLead ?? false;
   const isSub = ch?.isSubagent ?? false;
 
   const handleSave = () => {
@@ -81,8 +116,9 @@ export function CharacterCustomizeModal({
       customName,
       palette: selectedPalette,
       hueShift: selectedHueShift,
-      isPanda,
-      gender,
+      isPanda: ch?.isPanda ?? false,
+      gender: 'neutral',
+      idlePreference,
     });
   };
 
@@ -94,103 +130,26 @@ export function CharacterCustomizeModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isPanda ? (isTeamLead ? '🐼 Оркестратор-Панда' : '🐼 Настройка персонажа') : 'Настройка персонажа'}
+      title="Настройка персонажа"
       zIndex={60}
       className="min-w-[320px]"
     >
       <div className="px-10 pb-8 flex flex-col gap-12">
-
-        {/* Panda orchestrator highlight */}
-        {isTeamLead && (
-          <div
-            className="text-center text-sm py-4 px-8"
-            style={{ background: 'rgba(96, 48, 255, 0.15)', border: '1px solid rgba(96, 48, 255, 0.4)', color: '#a07fff' }}
-          >
-            Главный оркестратор — попробуй стиль Панды!
-          </div>
-        )}
-
-        {/* Panda toggle */}
+        {/* Character palette — sprite previews */}
         <div className="flex flex-col gap-4">
-          <span className="text-sm text-text-muted">Стиль</span>
-          <div className="flex gap-6">
-            <button
-              onClick={() => setIsPanda(false)}
-              className={`flex-1 py-6 px-8 text-sm border-2 rounded-none cursor-pointer ${
-                !isPanda
-                  ? 'border-accent bg-active-bg text-text'
-                  : 'border-border bg-btn-bg text-text-muted hover:bg-btn-hover'
-              }`}
-            >
-              Человек
-            </button>
-            <button
-              onClick={() => setIsPanda(true)}
-              className={`flex-1 py-6 px-8 text-sm border-2 rounded-none cursor-pointer ${
-                isPanda
-                  ? 'border-accent bg-active-bg text-text'
-                  : 'border-border bg-btn-bg text-text-muted hover:bg-btn-hover'
-              }`}
-            >
-              🐼 Панда
-            </button>
-          </div>
-        </div>
-
-        {/* Character palette */}
-        {!isPanda && (
-          <div className="flex flex-col gap-4">
-            <span className="text-sm text-text-muted">Персонаж</span>
-            <div className="flex gap-4 flex-wrap">
-              {PALETTE_COLORS.map((color, idx) => (
-                <button
-                  key={idx}
-                  title={`Персонаж ${idx + 1}`}
-                  onClick={() => { setSelectedPalette(idx); setSelectedHueShift(0); }}
-                  className="w-28 h-28 border-2 rounded-none cursor-pointer"
-                  style={{
-                    background: color,
-                    borderColor: selectedPalette === idx && !isPanda ? 'var(--color-accent-bright)' : 'var(--color-border)',
-                    boxShadow: selectedPalette === idx && !isPanda ? '0 0 0 1px var(--color-accent-bright)' : 'none',
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Panda preview */}
-        {isPanda && (
-          <div
-            className="flex items-center justify-center py-8"
-            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
-          >
-            <span style={{ fontSize: '48px', lineHeight: 1 }}>🐼</span>
-            <div className="ml-8 flex flex-col gap-2">
-              <span className="text-base" style={{ color: '#d0d0d0' }}>
-                {isTeamLead ? 'Главный Оркестратор' : 'Агент-Панда'}
-              </span>
-              <span className="text-sm text-text-muted">Чёрно-белый стиль</span>
-            </div>
-          </div>
-        )}
-
-        {/* Gender */}
-        <div className="flex flex-col gap-4">
-          <span className="text-sm text-text-muted">Пол</span>
-          <div className="flex gap-4">
-            {GENDER_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setGender(opt.value)}
-                className={`flex-1 py-4 text-sm border-2 rounded-none cursor-pointer ${
-                  gender === opt.value
-                    ? 'border-accent bg-active-bg text-text'
-                    : 'border-border bg-btn-bg text-text-muted hover:bg-btn-hover'
-                }`}
-              >
-                {opt.label}
-              </button>
+          <span className="text-sm text-text-muted">Персонаж</span>
+          <div className="flex gap-4 flex-wrap">
+            {Array.from({ length: getLoadedCharacterCount() }, (_, idx) => (
+              <SpritePreview
+                key={idx}
+                palette={idx}
+                hueShift={selectedPalette === idx ? selectedHueShift : 0}
+                selected={selectedPalette === idx}
+                onClick={() => {
+                  setSelectedPalette(idx);
+                  setSelectedHueShift(0);
+                }}
+              />
             ))}
           </div>
         </div>
@@ -202,11 +161,35 @@ export function CharacterCustomizeModal({
             type="text"
             value={customName}
             onChange={(e) => setCustomName(e.target.value)}
-            placeholder={isSub ? 'Подагент' : (isTeamLead ? 'Оркестратор' : 'Агент')}
+            placeholder={isSub ? 'Подагент' : 'Агент'}
             maxLength={32}
             className="w-full py-4 px-8 text-sm bg-btn-bg border-2 border-border text-text rounded-none outline-none focus:border-accent"
-            style={{ fontFamily: 'inherit' }}
           />
+        </div>
+
+        {/* Idle preference */}
+        <div className="flex flex-col gap-4">
+          <span className="text-sm text-text-muted">Отдых</span>
+          <div className="flex gap-3 flex-wrap">
+            {[
+              { value: 'random', label: 'Случайно', icon: '🎲' },
+              { value: 'coffee', label: 'Кофе ☕', icon: '' },
+              { value: 'sleep', label: 'Сон 💤', icon: '' },
+              { value: 'phone', label: 'Телефон 📱', icon: '' },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setIdlePreference(opt.value)}
+                className={`flex-1 py-4 px-6 text-xs border-2 rounded-none cursor-pointer ${
+                  idlePreference === opt.value
+                    ? 'border-accent bg-active-bg text-text'
+                    : 'border-border bg-btn-bg text-text-muted hover:bg-btn-hover'
+                }`}
+              >
+                {opt.label || opt.icon}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Action buttons */}

@@ -134,6 +134,20 @@ export const CHARACTER_HIT_HALF_WIDTH = 8;
 export const CHARACTER_HIT_HEIGHT = 24;
 export const TOOL_OVERLAY_VERTICAL_OFFSET = 32;
 
+// ── Idle Activities ─────────────────────────────────────────
+/** Seconds per animation frame for idle activities (coffee sip, phone scroll) */
+export const IDLE_ACTIVITY_FRAME_SEC = 0.9;
+/** Number of distinct animation frames per idle activity */
+export const IDLE_ACTIVITY_FRAMES = 4;
+/** Amplitude (pixels) of the gentle bob applied to overlay sprites */
+export const IDLE_OVERLAY_BOB_PX = 0.8;
+/** Angular frequency of the bob (radians per second) */
+export const IDLE_OVERLAY_BOB_FREQ = 2.5;
+/** Vertical gap (sprite pixels) between character top and overlay bottom */
+export const IDLE_OVERLAY_GAP_PX = 2;
+/** Horizontal shift (sprite pixels) to the right for overlay positioning */
+export const IDLE_OVERLAY_X_SHIFT_PX = 3;
+
 // ── Agent Teams ─────────────────────────────────────────────
 export const MAX_CONTEXT_TOKENS = 200_000;
 export const TOKEN_WARN_THRESHOLD = 0.6;
@@ -148,3 +162,7 @@ export const FUEL_COLOR_CRITICAL = '#ff2222';
 export const FUEL_GAUGE_BG = '#222';
 export const TEAM_LEAD_COLOR = '#ffd700';
 export const TEAM_ROLE_COLOR = '#66aaff';
+
+// ── Panda character rendering ────────────────────────────────
+export const PANDA_EAR_OUTER_COLOR = '#0d0d0d';
+export const PANDA_EAR_INNER_COLOR = '#d0d0d0';

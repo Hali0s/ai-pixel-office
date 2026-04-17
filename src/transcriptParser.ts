@@ -425,8 +425,15 @@ export function processTranscriptLine(
         }
       }
     }
-  } catch {
-    // Ignore malformed lines
+  } catch (e) {
+    // Log malformed JSONL lines but don't crash — corrupted writes are common on Windows
+    // (partial writes, locked files, encoding issues). Only log first occurrence per agent
+    // to avoid flooding the output.
+    if (agent.linesProcessed <= 1 || agent.linesProcessed % 100 === 0) {
+      console.log(
+        `[AI Pixel Office] JSONL: Agent ${agentId} - malformed line (linesProcessed=${agent.linesProcessed}): ${e instanceof Error ? e.message : String(e)}. Line preview: ${line.slice(0, 80)}`,
+      );
+    }
   }
 }
 

@@ -3,6 +3,10 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
+import {
+  HOOK_SERVER_RECONNECT_INITIAL_MS,
+  HOOK_SERVER_RECONNECT_MAX_MS,
+} from '../server/src/constants.js';
 import type { HookEvent } from '../server/src/hookEventHandler.js';
 import { HookEventHandler } from '../server/src/hookEventHandler.js';
 import {
@@ -63,6 +67,7 @@ import {
 } from './fileWatcher.js';
 import type { LayoutWatcher } from './layoutPersistence.js';
 import { readLayoutFromFile, watchLayoutFile, writeLayoutToFile } from './layoutPersistence.js';
+import { startAgentWatchdog } from './timerManager.js';
 import { setHookProvider } from './transcriptParser.js';
 import type { AgentState } from './types.js';
 
@@ -87,6 +92,14 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
   // External session detection (VS Code extension panel, etc.)
   externalScanTimer: ReturnType<typeof setInterval> | null = null;
   staleCheckTimer: ReturnType<typeof setInterval> | null = null;
+
+  // Watchdog timer: resets agents stuck in waiting state (Windows reliability)
+  agentWatchdogTimer: ReturnType<typeof setInterval> | null = null;
+
+  // Hook server reconnect state
+  private hookServerConnected = false;
+  private hookServerReconnectAttempt = 0;
+  private hookServerReconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Global session scanning (opt-in "Watch All Sessions" toggle)
   watchAllSessions = { current: false };
@@ -261,10 +274,64 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
           copyHookScript(this.context.extensionPath);
         }
         console.log(`[AI Pixel Office] Server: ready on port ${config.port}`);
+        this.onHookServerConnected();
       })
       .catch((e) => {
         console.error(`[AI Pixel Office] Failed to start server: ${e}`);
+        this.scheduleHookServerReconnect();
       });
+
+    // Start watchdog timer for stuck agents (Windows reliability)
+    if (!this.agentWatchdogTimer) {
+      this.agentWatchdogTimer = startAgentWatchdog(
+        this.agents,
+        this.waitingTimers,
+        this.permissionTimers,
+        this.webview,
+      );
+      console.log('[AI Pixel Office] Watchdog: agent watchdog started');
+    }
+  }
+
+  /** Called when hook server is successfully connected/started */
+  private onHookServerConnected(): void {
+    this.hookServerConnected = true;
+    this.hookServerReconnectAttempt = 0;
+    if (this.hookServerReconnectTimer) {
+      clearTimeout(this.hookServerReconnectTimer);
+      this.hookServerReconnectTimer = null;
+    }
+    this.webview?.postMessage({ type: 'hookServerStatus', connected: true });
+  }
+
+  /** Exponential backoff reconnect for hook server (1s, 2s, 4s, 8s, max 30s) */
+  private scheduleHookServerReconnect(): void {
+    if (this.hookServerReconnectTimer) return; // Already scheduled
+    const delay = Math.min(
+      HOOK_SERVER_RECONNECT_INITIAL_MS * Math.pow(2, this.hookServerReconnectAttempt),
+      HOOK_SERVER_RECONNECT_MAX_MS,
+    );
+    this.hookServerReconnectAttempt++;
+    this.hookServerConnected = false;
+    console.log(
+      `[AI Pixel Office] Server: reconnect attempt ${this.hookServerReconnectAttempt} in ${delay}ms`,
+    );
+    this.webview?.postMessage({ type: 'hookServerStatus', connected: false });
+
+    this.hookServerReconnectTimer = setTimeout(() => {
+      this.hookServerReconnectTimer = null;
+      if (!this.pixelAgentsServer) return;
+      this.pixelAgentsServer
+        .start()
+        .then((config) => {
+          console.log(`[AI Pixel Office] Server: reconnected on port ${config.port}`);
+          this.onHookServerConnected();
+        })
+        .catch((e) => {
+          console.error(`[AI Pixel Office] Server: reconnect failed: ${e}`);
+          this.scheduleHookServerReconnect();
+        });
+    }, delay);
   }
 
   /** Remove all teammates of a lead agent */
@@ -325,7 +392,8 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
       path.join(homeDir, '.claude', 'agents'),
     ];
 
-    const templates: Array<{ name: string; description: string; prompt: string; source: string }> = [];
+    const templates: Array<{ name: string; description: string; prompt: string; source: string }> =
+      [];
     const seen = new Set<string>();
 
     for (const dir of scanDirs) {
@@ -390,8 +458,12 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
       if (message.type === 'openClaude') {
         const prevAgentIds = new Set(this.agents.keys());
         // Global bypass setting takes precedence — if enabled, always skip permissions
-        const globalBypass = this.context.globalState.get<boolean>(GLOBAL_KEY_BYPASS_PERMISSIONS, false);
+        const globalBypass = this.context.globalState.get<boolean>(
+          GLOBAL_KEY_BYPASS_PERMISSIONS,
+          false,
+        );
         const bypass = globalBypass || (message.bypassPermissions as boolean | undefined);
+        const initialPalette = message.initialPalette as number | undefined;
         await launchNewTerminal(
           this.nextAgentId,
           this.nextTerminalIndex,
@@ -409,6 +481,7 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
           message.folderPath as string | undefined,
           bypass,
           message.initialPrompt as string | undefined,
+          initialPalette,
         );
         // Register newly created agent(s) with hook handler
         for (const [id, agent] of this.agents) {
@@ -599,7 +672,9 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
         // Ensure project scan runs even with no restored agents (to adopt external terminals)
         const projectDir = getProjectDirPath();
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        console.log(`[AI Pixel Office] Debug: Platform: ${process.platform}, arch: ${process.arch}`);
+        console.log(
+          `[AI Pixel Office] Debug: Platform: ${process.platform}, arch: ${process.arch}`,
+        );
         console.log('[Extension] workspaceRoot:', workspaceRoot);
         console.log('[Extension] projectDir:', projectDir);
         ensureProjectScan(
@@ -855,6 +930,75 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
         } catch {
           vscode.window.showErrorMessage('AI Pixel Office: Failed to read or parse layout file.');
         }
+      } else if (message.type === 'saveAgentTemplate') {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        const homeDir = os.homedir();
+        const source = message.source as string;
+        const name = (message.name as string).trim();
+        const description = (message.description as string | undefined)?.trim() ?? '';
+        const prompt = (message.prompt as string).trim();
+        const originalName = message.originalName as string | undefined;
+
+        const dir =
+          source === 'workspace' && workspaceRoot
+            ? path.join(workspaceRoot, '.claude', 'agents')
+            : path.join(homeDir, '.claude', 'agents');
+
+        try {
+          fs.mkdirSync(dir, { recursive: true });
+
+          // Удаляем старый файл при переименовании
+          if (originalName && originalName !== name) {
+            const oldSlug = originalName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            const oldFile = path.join(dir, `${oldSlug}.md`);
+            if (fs.existsSync(oldFile)) {
+              fs.unlinkSync(oldFile);
+            }
+          }
+
+          const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+          const filePath = path.join(dir, `${slug}.md`);
+          const descLine = description ? `\ndescription: ${description}` : '';
+          const content = `---\nname: ${name}${descLine}\n---\n${prompt}\n`;
+          fs.writeFileSync(filePath, content, 'utf8');
+          console.log(`[AI Pixel Office] Saved agent template: ${filePath}`);
+          this.sendAgentTemplates();
+        } catch (err) {
+          console.error('[AI Pixel Office] Failed to save agent template:', err);
+          vscode.window.showErrorMessage(`AI Pixel Office: Не удалось сохранить шаблон: ${err}`);
+        }
+      } else if (message.type === 'sendAgentMessage') {
+        const agent = this.agents.get(message.id as number);
+        if (agent?.terminalRef) {
+          agent.terminalRef.sendText(message.text as string);
+        }
+      } else if (message.type === 'renameAgent') {
+        // Rename is handled client-side in officeState; nothing to persist server-side
+        // (customName is saved via saveAgentSeats from App.tsx handleCharacterSave)
+      } else if (message.type === 'deleteAgentTemplate') {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        const homeDir = os.homedir();
+        const source = message.source as string;
+        const name = message.name as string;
+
+        const dir =
+          source === 'workspace' && workspaceRoot
+            ? path.join(workspaceRoot, '.claude', 'agents')
+            : path.join(homeDir, '.claude', 'agents');
+
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        const filePath = path.join(dir, `${slug}.md`);
+
+        try {
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+            console.log(`[AI Pixel Office] Deleted agent template: ${filePath}`);
+          }
+          this.sendAgentTemplates();
+        } catch (err) {
+          console.error('[AI Pixel Office] Failed to delete agent template:', err);
+          vscode.window.showErrorMessage(`AI Pixel Office: Не удалось удалить шаблон: ${err}`);
+        }
       }
     });
 
@@ -1024,6 +1168,17 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
     if (this.staleCheckTimer) {
       clearInterval(this.staleCheckTimer);
       this.staleCheckTimer = null;
+    }
+    if (this.agentWatchdogTimer) {
+      clearInterval(this.agentWatchdogTimer);
+      this.agentWatchdogTimer = null;
+    }
+    if (this.hookServerReconnectTimer) {
+      clearTimeout(this.hookServerReconnectTimer);
+      this.hookServerReconnectTimer = null;
+    }
+    if (this.hookServerConnected) {
+      this.hookServerConnected = false;
     }
   }
 }

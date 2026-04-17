@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import type { AgentTemplate } from '../components/AgentLauncherModal.js';
 import { playDoneSound, playPermissionSound, setSoundEnabled } from '../notificationSound.js';
 import type { OfficeState } from '../office/engine/officeState.js';
 import { setFloorSprites } from '../office/floorTiles.js';
@@ -7,7 +8,6 @@ import { buildDynamicCatalog } from '../office/layout/furnitureCatalog.js';
 import { migrateLayoutColors } from '../office/layout/layoutSerializer.js';
 import { setCharacterTemplates } from '../office/sprites/spriteData.js';
 import { extractToolName } from '../office/toolUtils.js';
-import type { AgentTemplate } from '../components/AgentLauncherModal.js';
 import type { OfficeLayout, ToolActivity } from '../office/types.js';
 import { setWallSprites } from '../office/wallTiles.js';
 import { vscode } from '../vscodeApi.js';
@@ -47,6 +47,9 @@ export interface WorkspaceFolder {
   path: string;
 }
 
+/** Hook server connection status */
+export type HookServerStatus = 'connected' | 'reconnecting' | 'disconnected';
+
 interface ExtensionMessageState {
   agents: number[];
   selectedAgent: number | null;
@@ -70,6 +73,7 @@ interface ExtensionMessageState {
   agentTemplates: AgentTemplate[];
   bypassPermissions: boolean;
   setBypassPermissions: (v: boolean) => void;
+  hookServerStatus: HookServerStatus;
 }
 
 function saveAgentSeats(os: OfficeState): void {
@@ -82,6 +86,7 @@ function saveAgentSeats(os: OfficeState): void {
       customName?: string;
       isPanda?: boolean;
       gender?: string;
+      idlePreference?: string;
     }
   > = {};
   for (const ch of os.characters.values()) {
@@ -93,6 +98,7 @@ function saveAgentSeats(os: OfficeState): void {
       customName: ch.customName,
       isPanda: ch.isPanda,
       gender: ch.gender,
+      idlePreference: ch.idlePreference,
     };
   }
   vscode.postMessage({ type: 'saveAgentSeats', seats });
@@ -126,6 +132,7 @@ export function useExtensionMessages(
   const [hooksInfoShown, setHooksInfoShown] = useState(true);
   const [agentTemplates, setAgentTemplates] = useState<AgentTemplate[]>([]);
   const [bypassPermissions, setBypassPermissions] = useState(false);
+  const [hookServerStatus, setHookServerStatus] = useState<HookServerStatus>('connected');
 
   // Track whether initial layout has been loaded (ref to avoid re-render)
   const layoutReadyRef = useRef(false);
@@ -141,6 +148,7 @@ export function useExtensionMessages(
       customName?: string;
       isPanda?: boolean;
       gender?: string;
+      idlePreference?: string;
     }> = [];
 
     const handler = (e: MessageEvent) => {
@@ -166,11 +174,17 @@ export function useExtensionMessages(
         for (const p of pendingAgents) {
           os.addAgent(p.id, p.palette, p.hueShift, p.seatId, true, p.folderName);
           // Restore character customization (no spawn effect — addAgent already handles it)
-          if (p.customName !== undefined || p.isPanda !== undefined || p.gender !== undefined) {
+          if (
+            p.customName !== undefined ||
+            p.isPanda !== undefined ||
+            p.gender !== undefined ||
+            p.idlePreference !== undefined
+          ) {
             os.setCharacterCustomization(p.id, {
               customName: p.customName,
               isPanda: p.isPanda,
               gender: p.gender,
+              idlePreference: p.idlePreference,
               skipSpawnEffect: true,
             });
           }
@@ -191,6 +205,7 @@ export function useExtensionMessages(
         const teammateName = msg.teammateName as string | undefined;
         const teammateParentId = msg.parentAgentId as number | undefined;
         const teamName = msg.teamName as string | undefined;
+        const initialPalette = msg.initialPalette as number | undefined;
         setAgents((prev) => (prev.includes(id) ? prev : [...prev, id]));
         // Don't auto-select teammates (keep focus on lead)
         if (!isTeammate) {
@@ -211,7 +226,7 @@ export function useExtensionMessages(
             ch.agentName = teammateName;
           }
         } else {
-          os.addAgent(id, undefined, undefined, undefined, undefined, folderName);
+          os.addAgent(id, initialPalette, undefined, undefined, undefined, folderName);
         }
         saveAgentSeats(os);
       } else if (msg.type === 'agentClosed') {
@@ -251,6 +266,7 @@ export function useExtensionMessages(
             customName?: string;
             isPanda?: boolean;
             gender?: string;
+            idlePreference?: string;
           }
         >;
         const folderNames = (msg.folderNames || {}) as Record<number, string>;
@@ -266,6 +282,7 @@ export function useExtensionMessages(
             customName: m?.customName,
             isPanda: m?.isPanda,
             gender: m?.gender,
+            idlePreference: m?.idlePreference,
           });
         }
         setAgents((prev) => {
@@ -481,13 +498,16 @@ export function useExtensionMessages(
           prev.filter((s) => !(s.parentAgentId === id && s.parentToolId === parentToolId)),
         );
       } else if (msg.type === 'characterSpritesLoaded') {
-        const characters = msg.characters as Array<{
-          down: string[][][];
-          up: string[][][];
-          right: string[][][];
-        }>;
-        console.log(`[Webview] Received ${characters.length} pre-colored character sprites`);
-        setCharacterTemplates(characters);
+        type GenderFrames = Array<{ down: string[][][]; up: string[][][]; right: string[][][] }>;
+        const characters = msg.characters as GenderFrames;
+        const female = msg.female as GenderFrames | undefined;
+        const male = msg.male as GenderFrames | undefined;
+        console.log(
+          `[Webview] Received ${characters.length} character sprites` +
+            (female ? ` + ${female.length} female` : '') +
+            (male ? ` + ${male.length} male` : ''),
+        );
+        setCharacterTemplates({ neutral: characters, female, male });
       } else if (msg.type === 'floorTilesLoaded') {
         const sprites = msg.sprites as string[][][];
         console.log(`[Webview] Received ${sprites.length} floor tile patterns`);
@@ -532,6 +552,10 @@ export function useExtensionMessages(
         }
       } else if (msg.type === 'agentTemplates') {
         setAgentTemplates((msg.templates as AgentTemplate[]) ?? []);
+      } else if (msg.type === 'hookServerStatus') {
+        // Hook server connection status from extension backend
+        const connected = msg.connected as boolean;
+        setHookServerStatus(connected ? 'connected' : 'reconnecting');
       } else if (msg.type === 'furnitureAssetsLoaded') {
         try {
           const catalog = msg.catalog as FurnitureAsset[];
@@ -587,5 +611,6 @@ export function useExtensionMessages(
     agentTemplates,
     bypassPermissions,
     setBypassPermissions,
+    hookServerStatus,
   };
 }

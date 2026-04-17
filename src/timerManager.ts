@@ -1,6 +1,10 @@
 import type * as vscode from 'vscode';
 
-import { PERMISSION_TIMER_DELAY_MS } from '../server/src/constants.js';
+import {
+  AGENT_WATCHDOG_INTERVAL_MS,
+  AGENT_WATCHDOG_TIMEOUT_MS,
+  PERMISSION_TIMER_DELAY_MS,
+} from '../server/src/constants.js';
 import type { AgentState } from './types.js';
 
 export function clearAgentActivity(
@@ -94,6 +98,41 @@ export function cancelPermissionTimer(
     clearTimeout(timer);
     permissionTimers.delete(agentId);
   }
+}
+
+/**
+ * Watchdog timer: periodically scans all agents and resets those stuck in
+ * isWaiting=true for longer than AGENT_WATCHDOG_TIMEOUT_MS (5 minutes).
+ *
+ * Targets Windows reliability: on Windows the heuristic timers (waiting/permission)
+ * can get stuck if the JSONL file watcher misses events. The watchdog is a safety net
+ * that prevents agents from staying frozen forever.
+ *
+ * Returns a cleanup function that stops the watchdog.
+ */
+export function startAgentWatchdog(
+  agents: Map<number, AgentState>,
+  waitingTimers: Map<number, ReturnType<typeof setTimeout>>,
+  permissionTimers: Map<number, ReturnType<typeof setTimeout>>,
+  webview: vscode.Webview | undefined,
+): ReturnType<typeof setInterval> {
+  return setInterval(() => {
+    const now = Date.now();
+    for (const [agentId, agent] of agents) {
+      if (!agent.isWaiting) continue;
+      // Only check agents that have been waiting since before lastDataAt + timeout
+      const waitingStartedAt = agent.lastDataAt > 0 ? agent.lastDataAt : now;
+      if (now - waitingStartedAt < AGENT_WATCHDOG_TIMEOUT_MS) continue;
+      // Agent has been waiting for too long — reset to idle
+      console.log(
+        `[AI Pixel Office] Watchdog: Agent ${agentId} - stuck in waiting state for ${Math.round((now - waitingStartedAt) / 1000)}s, resetting to idle`,
+      );
+      agent.isWaiting = false;
+      cancelWaitingTimer(agentId, waitingTimers);
+      cancelPermissionTimer(agentId, permissionTimers);
+      webview?.postMessage({ type: 'agentStatus', id: agentId, status: 'active' });
+    }
+  }, AGENT_WATCHDOG_INTERVAL_MS);
 }
 
 export function startPermissionTimer(
