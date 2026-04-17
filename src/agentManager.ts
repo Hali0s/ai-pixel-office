@@ -78,6 +78,7 @@ export async function launchNewTerminal(
   bypassPermissions?: boolean,
   initialPrompt?: string,
   initialPalette?: number,
+  terminalLocation?: 'panel' | 'editor',
 ): Promise<void> {
   const folders = vscode.workspace.workspaceFolders;
   // Use home directory as fallback cwd when no workspace is open (common on Linux/macOS).
@@ -89,6 +90,10 @@ export async function launchNewTerminal(
   const terminal = vscode.window.createTerminal({
     name: `${TERMINAL_NAME_PREFIX} #${idx}`,
     cwd,
+    location:
+      terminalLocation === 'editor'
+        ? vscode.TerminalLocation.Editor
+        : vscode.TerminalLocation.Panel,
   });
   terminal.show();
 

@@ -464,6 +464,7 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
         );
         const bypass = globalBypass || (message.bypassPermissions as boolean | undefined);
         const initialPalette = message.initialPalette as number | undefined;
+        const terminalLocation = message.terminalLocation as 'panel' | 'editor' | undefined;
         await launchNewTerminal(
           this.nextAgentId,
           this.nextTerminalIndex,
@@ -482,6 +483,7 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
           bypass,
           message.initialPrompt as string | undefined,
           initialPalette,
+          terminalLocation,
         );
         // Register newly created agent(s) with hook handler
         for (const [id, agent] of this.agents) {

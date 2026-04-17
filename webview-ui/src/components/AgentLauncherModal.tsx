@@ -85,6 +85,7 @@ export function AgentLauncherModal({
   const [editorTemplate, setEditorTemplate] = useState<AgentTemplate | null>(null);
   const [confirmDeleteName, setConfirmDeleteName] = useState<string | null>(null);
   const [selectedPalette, setSelectedPalette] = useState<number | null>(null);
+  const [terminalLocation, setTerminalLocation] = useState<'panel' | 'editor'>('panel');
 
   // Keep local state in sync when global setting changes
   useEffect(() => {
@@ -98,6 +99,7 @@ export function AgentLauncherModal({
     if (selectedFolder) msg.folderPath = selectedFolder;
     if (bypassPermissions) msg.bypassPermissions = true;
     if (selectedPalette !== null) msg.initialPalette = selectedPalette;
+    msg.terminalLocation = terminalLocation;
     vscode.postMessage(msg);
     // Reset state
     setSelectedTemplate(null);
@@ -312,6 +314,35 @@ export function AgentLauncherModal({
               </div>
             </div>
           )}
+
+          {/* Terminal location */}
+          <div className="flex flex-col gap-4">
+            <span className="text-sm text-text-muted">Открыть терминал в</span>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setTerminalLocation('panel')}
+                title="Открыть в нижней панели терминалов (стандартно)"
+                className={`flex-1 py-4 px-6 text-xs border-2 rounded-none cursor-pointer ${
+                  terminalLocation === 'panel'
+                    ? 'border-accent bg-active-bg text-text'
+                    : 'border-border bg-btn-bg text-text-muted hover:bg-btn-hover'
+                }`}
+              >
+                ▼ Панели
+              </button>
+              <button
+                onClick={() => setTerminalLocation('editor')}
+                title="Открыть как отдельную вкладку в редакторе"
+                className={`flex-1 py-4 px-6 text-xs border-2 rounded-none cursor-pointer ${
+                  terminalLocation === 'editor'
+                    ? 'border-accent bg-active-bg text-text'
+                    : 'border-border bg-btn-bg text-text-muted hover:bg-btn-hover'
+                }`}
+              >
+                ◱ Вкладке
+              </button>
+            </div>
+          </div>
 
           {/* Action buttons + bypass permissions */}
           <div className="flex gap-6 pt-2">
