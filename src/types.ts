@@ -22,6 +22,10 @@ export interface AgentState {
   hadToolsInTurn: boolean;
   /** Workspace folder name (only set for multi-root workspaces) */
   folderName?: string;
+  /** Initial prompt sent to the agent on launch */
+  initialPrompt?: string;
+  /** Template name used to launch the agent */
+  templateName?: string;
   /** Timestamp of last JSONL data received (ms since epoch) */
   lastDataAt: number;
   /** Total JSONL lines processed for this agent */

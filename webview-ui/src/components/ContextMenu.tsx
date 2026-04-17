@@ -5,10 +5,12 @@ interface ContextMenuProps {
   y: number;
   agentId: number;
   folderPath?: string;
+  hasPrompt?: boolean;
   onClose: () => void;
   onSendMessage: (agentId: number) => void;
   onCustomize: (agentId: number) => void;
   onCopySessionId: (agentId: number) => void;
+  onViewPrompt: (agentId: number) => void;
   onAttachSession: (agentId: number) => void;
   onHideAgent: (agentId: number) => void;
   onCloseAgent: (agentId: number) => void;
@@ -20,10 +22,12 @@ export function ContextMenu({
   y,
   agentId,
   folderPath,
+  hasPrompt,
   onClose,
   onSendMessage,
   onCustomize,
   onCopySessionId,
+  onViewPrompt,
   onAttachSession,
   onHideAgent,
   onCloseAgent,
@@ -130,6 +134,21 @@ export function ContextMenu({
       >
         <span>🎨</span> Сменить образ
       </button>
+
+      {hasPrompt && (
+        <button
+          style={itemStyle}
+          onClick={handleItem(() => onViewPrompt(agentId))}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+          }}
+        >
+          <span>📝</span> Шаблон агента
+        </button>
+      )}
 
       <button
         style={itemStyle}

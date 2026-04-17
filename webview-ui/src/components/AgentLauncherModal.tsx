@@ -130,6 +130,7 @@ export function AgentLauncherModal({
       if (bypassPermissions) msg.bypassPermissions = true;
       if (selectedPalette !== null) msg.initialPalette = selectedPalette;
       if (resumeSessionId) msg.resumeSessionId = resumeSessionId;
+      if (selectedTemplate) msg.templateName = selectedTemplate.name;
       msg.terminalLocation = terminalLocation;
       vscode.postMessage(msg);
     }

@@ -204,6 +204,10 @@ export interface Character {
   customName?: string;
   /** Render character in panda (black & white) mode */
   isPanda?: boolean;
+  /** Initial prompt used to launch this agent */
+  initialPrompt?: string;
+  /** Template name used to launch this agent */
+  templateName?: string;
   /** Gender cosmetic preference */
   gender?: 'neutral' | 'female' | 'male';
 

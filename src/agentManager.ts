@@ -80,6 +80,7 @@ export async function launchNewTerminal(
   initialPalette?: number,
   terminalLocation?: 'panel' | 'editor',
   resumeSessionId?: string,
+  templateName?: string,
 ): Promise<void> {
   const folders = vscode.workspace.workspaceFolders;
   // Use home directory as fallback cwd when no workspace is open (common on Linux/macOS).
@@ -156,6 +157,8 @@ export async function launchNewTerminal(
     linesProcessed: 0,
     seenUnknownRecordTypes: new Set(),
     folderName,
+    initialPrompt,
+    templateName,
     hookDelivered: false,
     inputTokens: 0,
     outputTokens: 0,
@@ -167,6 +170,8 @@ export async function launchNewTerminal(
   console.log(`[AI Pixel Office] Terminal: Agent ${id} - created for terminal ${terminal.name}`);
   const createdMsg: Record<string, unknown> = { type: 'agentCreated', id, folderName };
   if (initialPalette !== undefined) createdMsg.initialPalette = initialPalette;
+  if (initialPrompt) createdMsg.initialPrompt = initialPrompt;
+  if (templateName) createdMsg.templateName = templateName;
   webview?.postMessage(createdMsg);
 
   ensureProjectScan(

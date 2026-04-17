@@ -227,6 +227,11 @@ export function useExtensionMessages(
           }
         } else {
           os.addAgent(id, initialPalette, undefined, undefined, undefined, folderName);
+          const ch = os.characters.get(id);
+          if (ch) {
+            if (msg.initialPrompt) ch.initialPrompt = msg.initialPrompt as string;
+            if (msg.templateName) ch.templateName = msg.templateName as string;
+          }
         }
         saveAgentSeats(os);
       } else if (msg.type === 'agentClosed') {

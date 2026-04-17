@@ -466,6 +466,7 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
         const initialPalette = message.initialPalette as number | undefined;
         const terminalLocation = message.terminalLocation as 'panel' | 'editor' | undefined;
         const resumeSessionId = message.resumeSessionId as string | undefined;
+        const templateName = message.templateName as string | undefined;
         await launchNewTerminal(
           this.nextAgentId,
           this.nextTerminalIndex,
@@ -486,6 +487,7 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
           initialPalette,
           terminalLocation,
           resumeSessionId,
+          templateName,
         );
         // Register newly created agent(s) with hook handler
         for (const [id, agent] of this.agents) {

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { toMajorMinor } from './changelogData.js';
 import { AgentLauncherModal } from './components/AgentLauncherModal.js';
+import { AgentPromptModal } from './components/AgentPromptModal.js';
 import { BottomToolbar } from './components/BottomToolbar.js';
 import { ChangelogModal } from './components/ChangelogModal.js';
 import { CharacterCustomizeModal } from './components/CharacterCustomizeModal.js';
@@ -116,6 +117,9 @@ function App() {
   // Session picker modal state
   const [sessionPickerAgentId, setSessionPickerAgentId] = useState<number | null>(null);
 
+  // Agent prompt modal state
+  const [promptModalAgentId, setPromptModalAgentId] = useState<number | null>(null);
+
   const currentMajorMinor = toMajorMinor(extensionVersion);
 
   const handleWhatsNewDismiss = useCallback(() => {
@@ -205,6 +209,11 @@ function App() {
     vscode.postMessage({ type: 'getAgentSessionId', id: agentId });
     // Fallback: copy agent id as string if no better data
     void navigator.clipboard.writeText(String(agentId)).catch(() => undefined);
+  }, []);
+
+  // Context menu action: view/edit agent prompt
+  const handleContextMenuViewPrompt = useCallback((agentId: number) => {
+    setPromptModalAgentId(agentId);
   }, []);
 
   // Context menu action: attach to session
@@ -605,10 +614,12 @@ function App() {
             const ch = getOfficeState().characters.get(contextMenu.agentId);
             return ch?.folderName;
           })()}
+          hasPrompt={!!getOfficeState().characters.get(contextMenu.agentId)?.initialPrompt}
           onClose={handleContextMenuClose}
           onSendMessage={handleContextMenuSendMessage}
           onCustomize={handleContextMenuCustomize}
           onCopySessionId={handleContextMenuCopySessionId}
+          onViewPrompt={handleContextMenuViewPrompt}
           onAttachSession={handleContextMenuAttachSession}
           onHideAgent={handleContextMenuHideAgent}
           onCloseAgent={handleContextMenuCloseAgent}
@@ -637,6 +648,21 @@ function App() {
       <SessionPickerModal
         agentId={sessionPickerAgentId}
         onClose={() => setSessionPickerAgentId(null)}
+      />
+
+      <AgentPromptModal
+        agentId={promptModalAgentId}
+        initialPrompt={
+          promptModalAgentId !== null
+            ? getOfficeState().characters.get(promptModalAgentId)?.initialPrompt
+            : undefined
+        }
+        templateName={
+          promptModalAgentId !== null
+            ? getOfficeState().characters.get(promptModalAgentId)?.templateName
+            : undefined
+        }
+        onClose={() => setPromptModalAgentId(null)}
       />
     </div>
   );
