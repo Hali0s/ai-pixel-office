@@ -85,7 +85,9 @@ export function AgentLauncherModal({
   const [editorTemplate, setEditorTemplate] = useState<AgentTemplate | null>(null);
   const [confirmDeleteName, setConfirmDeleteName] = useState<string | null>(null);
   const [selectedPalette, setSelectedPalette] = useState<number | null>(null);
-  const [terminalLocation, setTerminalLocation] = useState<'panel' | 'editor'>('panel');
+  const [terminalLocation, setTerminalLocation] = useState<'panel' | 'editor' | 'claude-ui'>(
+    'panel',
+  );
 
   // Keep local state in sync when global setting changes
   useEffect(() => {
@@ -93,14 +95,18 @@ export function AgentLauncherModal({
   }, [defaultBypassPermissions]);
 
   const handleLaunch = () => {
-    const prompt = customPrompt.trim() || (selectedTemplate?.prompt ?? '');
-    const msg: Record<string, unknown> = { type: 'openClaude' };
-    if (prompt) msg.initialPrompt = prompt;
-    if (selectedFolder) msg.folderPath = selectedFolder;
-    if (bypassPermissions) msg.bypassPermissions = true;
-    if (selectedPalette !== null) msg.initialPalette = selectedPalette;
-    msg.terminalLocation = terminalLocation;
-    vscode.postMessage(msg);
+    if (terminalLocation === 'claude-ui') {
+      vscode.postMessage({ type: 'openClaudeUI' });
+    } else {
+      const prompt = customPrompt.trim() || (selectedTemplate?.prompt ?? '');
+      const msg: Record<string, unknown> = { type: 'openClaude' };
+      if (prompt) msg.initialPrompt = prompt;
+      if (selectedFolder) msg.folderPath = selectedFolder;
+      if (bypassPermissions) msg.bypassPermissions = true;
+      if (selectedPalette !== null) msg.initialPalette = selectedPalette;
+      msg.terminalLocation = terminalLocation;
+      vscode.postMessage(msg);
+    }
     // Reset state
     setSelectedTemplate(null);
     setCustomPrompt('');
@@ -158,7 +164,10 @@ export function AgentLauncherModal({
         zIndex={60}
         className="min-w-[400px] max-w-[560px]"
       >
-        <div className="px-10 pb-8 flex flex-col gap-10">
+        <div
+          className="px-10 pb-8 flex flex-col gap-10"
+          style={{ maxHeight: '70vh', overflowY: 'auto' }}
+        >
           {/* Agent templates */}
           <div className="flex flex-col gap-6">
             <div className="flex items-center justify-between">
@@ -317,7 +326,7 @@ export function AgentLauncherModal({
 
           {/* Terminal location */}
           <div className="flex flex-col gap-4">
-            <span className="text-sm text-text-muted">Открыть терминал в</span>
+            <span className="text-sm text-text-muted">Открыть в</span>
             <div className="flex gap-4">
               <button
                 onClick={() => setTerminalLocation('panel')}
@@ -341,7 +350,26 @@ export function AgentLauncherModal({
               >
                 ◱ Вкладке
               </button>
+              <button
+                onClick={() => setTerminalLocation('claude-ui')}
+                title="Открыть через нативный UI Claude Code (требует расширение Claude Code)"
+                className={`flex-1 py-4 px-6 text-xs border-2 rounded-none cursor-pointer ${
+                  terminalLocation === 'claude-ui'
+                    ? 'border-accent bg-active-bg text-text'
+                    : 'border-border bg-btn-bg text-text-muted hover:bg-btn-hover'
+                }`}
+              >
+                ✦ Claude UI
+              </button>
             </div>
+            {terminalLocation === 'claude-ui' && (
+              <p className="text-xs" style={{ color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+                Сессия откроется в интерфейсе Claude Code. Персонаж появится автоматически — нужно
+                включить{' '}
+                <span style={{ color: 'var(--color-accent-bright)' }}>Отслеживать все сессии</span>{' '}
+                в Настройках или активные хуки (зелёная точка).
+              </p>
+            )}
           </div>
 
           {/* Action buttons + bypass permissions */}

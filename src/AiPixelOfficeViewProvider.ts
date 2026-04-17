@@ -493,7 +493,6 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
         }
       } else if (message.type === 'openClaudeUI') {
         try {
-          await vscode.commands.executeCommand('claude-vscode.editor.open');
           await vscode.commands.executeCommand('claude-vscode.newConversation');
         } catch {
           vscode.window.showErrorMessage(
