@@ -88,7 +88,9 @@ export function AgentLauncherModal({
   const [terminalLocation, setTerminalLocation] = useState<'panel' | 'editor' | 'claude-ui'>(
     'panel',
   );
-  const [sessions, setSessions] = useState<{ id: string; mtime: number }[]>([]);
+  const [sessions, setSessions] = useState<{ id: string; mtime: number; customName?: string }[]>(
+    [],
+  );
   const [resumeSessionId, setResumeSessionId] = useState<string | null>(null);
 
   // Keep local state in sync when global setting changes
@@ -107,10 +109,9 @@ export function AgentLauncherModal({
     const handler = (e: MessageEvent) => {
       if (e.data?.type === 'recentSessions') {
         setSessions(
-          (e.data.sessions as { sessionId: string; mtime: number }[]).map((s) => ({
-            id: s.sessionId,
-            mtime: s.mtime,
-          })),
+          (e.data.sessions as { sessionId: string; mtime: number; customName?: string }[]).map(
+            (s) => ({ id: s.sessionId, mtime: s.mtime, customName: s.customName }),
+          ),
         );
       }
     };
@@ -385,7 +386,7 @@ export function AgentLauncherModal({
                         : 'border-border bg-btn-bg text-text-muted hover:bg-btn-hover'
                     }`}
                   >
-                    <span className="font-mono truncate">{s.id.slice(0, 8)}…</span>
+                    <span className="truncate">{s.customName ?? s.id.slice(0, 8) + '…'}</span>
                     <span style={{ color: 'var(--color-text-muted)', flexShrink: 0 }}>
                       {formatRelativeTime(s.mtime)}
                     </span>

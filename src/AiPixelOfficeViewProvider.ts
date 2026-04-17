@@ -537,6 +537,11 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
         try {
           const projectDir = getProjectDirPath(message.folderPath as string | undefined);
           const trackedFiles = new Set([...this.agents.values()].map((a) => a.jsonlFile));
+          // Build a map of sessionId → customName from persisted agents
+          const persisted = this.context.workspaceState.get<
+            { sessionId?: string; customName?: string }[]
+          >('ai-pixel-office.agents', []);
+          const nameMap = new Map(persisted.map((p) => [p.sessionId, p.customName]));
           const files = fs.existsSync(projectDir)
             ? fs
                 .readdirSync(projectDir)
@@ -544,7 +549,13 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
                 .map((f) => {
                   const full = path.join(projectDir, f);
                   const stat = fs.statSync(full);
-                  return { sessionId: f.replace('.jsonl', ''), mtime: stat.mtimeMs, file: full };
+                  const sessionId = f.replace('.jsonl', '');
+                  return {
+                    sessionId,
+                    mtime: stat.mtimeMs,
+                    file: full,
+                    customName: nameMap.get(sessionId),
+                  };
                 })
                 .filter((f) => !trackedFiles.has(f.file))
                 .sort((a, b) => b.mtime - a.mtime)

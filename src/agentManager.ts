@@ -99,9 +99,16 @@ export async function launchNewTerminal(
   terminal.show();
 
   const sessionId = resumeSessionId ?? crypto.randomUUID();
-  const claudeCmd = bypassPermissions
-    ? `claude --session-id ${sessionId} --dangerously-skip-permissions`
-    : `claude --session-id ${sessionId}`;
+  let claudeCmd: string;
+  if (resumeSessionId) {
+    claudeCmd = bypassPermissions
+      ? `claude --resume ${resumeSessionId} --dangerously-skip-permissions`
+      : `claude --resume ${resumeSessionId}`;
+  } else {
+    claudeCmd = bypassPermissions
+      ? `claude --session-id ${sessionId} --dangerously-skip-permissions`
+      : `claude --session-id ${sessionId}`;
+  }
   terminal.sendText(claudeCmd);
 
   // Send initial prompt after a short delay to let claude start up
