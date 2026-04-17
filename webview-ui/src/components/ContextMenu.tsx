@@ -9,6 +9,7 @@ interface ContextMenuProps {
   onSendMessage: (agentId: number) => void;
   onCustomize: (agentId: number) => void;
   onCopySessionId: (agentId: number) => void;
+  onAttachSession: (agentId: number) => void;
   onHideAgent: (agentId: number) => void;
   onCloseAgent: (agentId: number) => void;
   onRename: (agentId: number) => void;
@@ -23,6 +24,7 @@ export function ContextMenu({
   onSendMessage,
   onCustomize,
   onCopySessionId,
+  onAttachSession,
   onHideAgent,
   onCloseAgent,
   onRename,
@@ -140,6 +142,19 @@ export function ContextMenu({
         }}
       >
         <span>📋</span> Копировать Session ID
+      </button>
+
+      <button
+        style={itemStyle}
+        onClick={handleItem(() => onAttachSession(agentId))}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent)';
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+        }}
+      >
+        <span>🔗</span> Привязать к сессии
       </button>
 
       {folderPath && (

@@ -512,6 +512,27 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
             }
           }
         }
+      } else if (message.type === 'requestAgentsList') {
+        const list = Array.from(this.agents.entries())
+          .filter(([, a]) => a.id >= 0 && !a.leadAgentId)
+          .map(([id, a]) => ({
+            id,
+            folderName: a.folderName,
+            projectDir: a.projectDir,
+            isExternal: a.isExternal,
+          }));
+        webviewView.webview.postMessage({ type: 'agentsList', agents: list });
+      } else if (message.type === 'updateAgentFolder') {
+        const agent = this.agents.get(message.id as number);
+        if (agent) {
+          agent.folderName = message.folderName as string;
+          this.persistAgents();
+          webviewView.webview.postMessage({
+            type: 'agentFolderUpdated',
+            id: message.id,
+            folderName: message.folderName,
+          });
+        }
       } else if (message.type === 'hideAgent') {
         // Remove character from webview but keep terminal/session alive
         webviewView.webview.postMessage({ type: 'agentClosed', id: message.id });

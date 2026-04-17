@@ -12,6 +12,7 @@ import { HelpModal } from './components/HelpModal.js';
 import { MigrationNotice } from './components/MigrationNotice.js';
 import { RenameModal } from './components/RenameModal.js';
 import { SendMessageModal } from './components/SendMessageModal.js';
+import { SessionPickerModal } from './components/SessionPickerModal.js';
 import { SettingsModal } from './components/SettingsModal.js';
 import { Tooltip } from './components/Tooltip.js';
 import { Modal } from './components/ui/Modal.js';
@@ -112,6 +113,9 @@ function App() {
   // Rename modal state
   const [renameAgentId, setRenameAgentId] = useState<number | null>(null);
 
+  // Session picker modal state
+  const [sessionPickerAgentId, setSessionPickerAgentId] = useState<number | null>(null);
+
   const currentMajorMinor = toMajorMinor(extensionVersion);
 
   const handleWhatsNewDismiss = useCallback(() => {
@@ -193,6 +197,11 @@ function App() {
     vscode.postMessage({ type: 'getAgentSessionId', id: agentId });
     // Fallback: copy agent id as string if no better data
     void navigator.clipboard.writeText(String(agentId)).catch(() => undefined);
+  }, []);
+
+  // Context menu action: attach to session
+  const handleContextMenuAttachSession = useCallback((agentId: number) => {
+    setSessionPickerAgentId(agentId);
   }, []);
 
   // Context menu action: hide character (terminal keeps running)
@@ -568,6 +577,7 @@ function App() {
           onSendMessage={handleContextMenuSendMessage}
           onCustomize={handleContextMenuCustomize}
           onCopySessionId={handleContextMenuCopySessionId}
+          onAttachSession={handleContextMenuAttachSession}
           onHideAgent={handleContextMenuHideAgent}
           onCloseAgent={handleContextMenuCloseAgent}
           onRename={handleContextMenuRename}
@@ -591,6 +601,11 @@ function App() {
       />
 
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+
+      <SessionPickerModal
+        agentId={sessionPickerAgentId}
+        onClose={() => setSessionPickerAgentId(null)}
+      />
     </div>
   );
 }
