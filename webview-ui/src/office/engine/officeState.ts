@@ -10,7 +10,10 @@ import {
   HUE_SHIFT_RANGE_DEG,
   INACTIVE_SEAT_TIMER_MIN_SEC,
   INACTIVE_SEAT_TIMER_RANGE_SEC,
+  MAX_GHOST_SUBAGENTS,
   WAITING_BUBBLE_DURATION_SEC,
+  WANDER_MOVES_BEFORE_REST_MAX,
+  WANDER_MOVES_BEFORE_REST_MIN,
 } from '../../constants.js';
 import { getAnimationFrames, getCatalogEntry, getOnStateType } from '../layout/furnitureCatalog.js';
 import {
@@ -52,6 +55,8 @@ export class OfficeState {
   subagentIdMap: Map<string, number> = new Map();
   /** Reverse lookup: sub-agent character ID → parent info */
   subagentMeta: Map<number, { parentAgentId: number; parentToolId: string }> = new Map();
+  /** Ghost sub-agents: character ID → parent agent ID (insertion order = oldest first) */
+  ghostSubagents: Map<number, number> = new Map();
   private nextSubagentId = -1;
 
   constructor(layout?: OfficeLayout) {
@@ -114,6 +119,7 @@ export class OfficeState {
     // Second pass: assign remaining characters to free seats
     for (const ch of this.characters.values()) {
       if (ch.seatId) continue;
+      if (ch.ghostOf !== undefined) continue; // ghosts wander freely without a seat
       const seatId = this.findFreeSeat();
       if (seatId) {
         this.seats.get(seatId)!.assigned = true;
@@ -487,7 +493,7 @@ export class OfficeState {
     return id;
   }
 
-  /** Remove a specific sub-agent character and free its seat */
+  /** Remove a specific sub-agent character — converts it to a ghost that wanders freely */
   removeSubagent(parentAgentId: number, parentToolId: string): void {
     const key = `${parentAgentId}:${parentToolId}`;
     const id = this.subagentIdMap.get(key);
@@ -501,21 +507,76 @@ export class OfficeState {
         this.subagentMeta.delete(id);
         return;
       }
+      // Free seat
       if (ch.seatId) {
         const seat = this.seats.get(ch.seatId);
         if (seat) seat.assigned = false;
       }
-      // Start despawn animation — keep character in map for rendering
-      ch.matrixEffect = 'despawn';
-      ch.matrixEffectTimer = 0;
-      ch.matrixEffectSeeds = matrixEffectSeeds();
+      // Convert to ghost: wander freely until parent agent is closed
+      ch.isSubagent = false;
+      ch.isActive = false;
+      ch.seatId = null;
+      ch.seatTimer = 0;
+      ch.ghostOf = parentAgentId;
       ch.bubbleType = null;
+      ch.currentTool = null;
+      ch.state = CharacterState.IDLE;
+      ch.path = [];
+      ch.moveProgress = 0;
+      ch.frame = 0;
+      ch.frameTimer = 0;
+      ch.wanderTimer = 0;
+      ch.wanderCount = 0;
+      ch.wanderLimit =
+        WANDER_MOVES_BEFORE_REST_MIN +
+        Math.floor(
+          Math.random() * (WANDER_MOVES_BEFORE_REST_MAX - WANDER_MOVES_BEFORE_REST_MIN + 1),
+        );
     }
+
     // Clean up tracking maps immediately so keys don't collide
     this.subagentIdMap.delete(key);
     this.subagentMeta.delete(id);
     if (this.selectedAgentId === id) this.selectedAgentId = null;
     if (this.cameraFollowId === id) this.cameraFollowId = null;
+
+    if (ch) {
+      // FIFO eviction: if at capacity for this parent, despawn the oldest ghost
+      let parentGhostCount = 0;
+      let oldestGhostId: number | null = null;
+      for (const [gid, pid] of this.ghostSubagents) {
+        if (pid === parentAgentId) {
+          parentGhostCount++;
+          if (oldestGhostId === null) oldestGhostId = gid;
+        }
+      }
+      if (parentGhostCount >= MAX_GHOST_SUBAGENTS && oldestGhostId !== null) {
+        this.despawnGhost(oldestGhostId);
+      }
+      this.ghostSubagents.set(id, parentAgentId);
+    }
+  }
+
+  private despawnGhost(ghostId: number): void {
+    const ch = this.characters.get(ghostId);
+    if (ch && ch.matrixEffect !== 'despawn') {
+      ch.matrixEffect = 'despawn';
+      ch.matrixEffectTimer = 0;
+      ch.matrixEffectSeeds = matrixEffectSeeds();
+      ch.bubbleType = null;
+    }
+    this.ghostSubagents.delete(ghostId);
+    if (this.selectedAgentId === ghostId) this.selectedAgentId = null;
+    if (this.cameraFollowId === ghostId) this.cameraFollowId = null;
+  }
+
+  /** Despawn all ghost sub-agents belonging to a parent agent (called when parent closes) */
+  removeGhostsForAgent(parentAgentId: number): void {
+    for (const [ghostId, pid] of this.ghostSubagents) {
+      if (pid === parentAgentId) {
+        this.despawnGhost(ghostId);
+      }
+    }
   }
 
   /** Remove all sub-agents belonging to a parent agent */

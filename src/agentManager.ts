@@ -79,6 +79,7 @@ export async function launchNewTerminal(
   initialPrompt?: string,
   initialPalette?: number,
   terminalLocation?: 'panel' | 'editor',
+  resumeSessionId?: string,
 ): Promise<void> {
   const folders = vscode.workspace.workspaceFolders;
   // Use home directory as fallback cwd when no workspace is open (common on Linux/macOS).
@@ -97,7 +98,7 @@ export async function launchNewTerminal(
   });
   terminal.show();
 
-  const sessionId = crypto.randomUUID();
+  const sessionId = resumeSessionId ?? crypto.randomUUID();
   const claudeCmd = bypassPermissions
     ? `claude --session-id ${sessionId} --dangerously-skip-permissions`
     : `claude --session-id ${sessionId}`;
@@ -120,6 +121,12 @@ export async function launchNewTerminal(
   // Create agent immediately (before JSONL file exists)
   const id = nextAgentIdRef.current++;
   const folderName = isMultiRoot && cwd ? path.basename(cwd) : undefined;
+  // For resumed sessions, start reading from end of existing file to skip old history
+  let initialOffset = 0;
+  if (resumeSessionId && fs.existsSync(expectedFile)) {
+    initialOffset = fs.statSync(expectedFile).size;
+  }
+
   const agent: AgentState = {
     id,
     sessionId,
@@ -127,7 +134,7 @@ export async function launchNewTerminal(
     isExternal: false,
     projectDir,
     jsonlFile: expectedFile,
-    fileOffset: 0,
+    fileOffset: initialOffset,
     lineBuffer: '',
     activeToolIds: new Set(),
     activeToolStatuses: new Map(),

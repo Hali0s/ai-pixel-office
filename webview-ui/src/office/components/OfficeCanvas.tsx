@@ -693,8 +693,8 @@ export function OfficeCanvas({
       // No agent hit — check seat click while agent is selected
       if (officeState.selectedAgentId !== null) {
         const selectedCh = officeState.characters.get(officeState.selectedAgentId);
-        // Skip seat reassignment for sub-agents
-        if (selectedCh && !selectedCh.isSubagent) {
+        // Skip seat reassignment for sub-agents and ghosts
+        if (selectedCh && !selectedCh.isSubagent && selectedCh.ghostOf === undefined) {
           const tile = screenToTile(e.clientX, e.clientY);
           if (tile) {
             const seatId = officeState.getSeatAtTile(tile.col, tile.row);
@@ -715,7 +715,7 @@ export function OfficeCanvas({
                   // Persist seat assignments (exclude sub-agents)
                   const seats: Record<number, { palette: number; seatId: string | null }> = {};
                   for (const ch of officeState.characters.values()) {
-                    if (ch.isSubagent) continue;
+                    if (ch.isSubagent || ch.ghostOf !== undefined) continue;
                     seats[ch.id] = { palette: ch.palette, seatId: ch.seatId };
                   }
                   vscode.postMessage({ type: 'saveAgentSeats', seats });

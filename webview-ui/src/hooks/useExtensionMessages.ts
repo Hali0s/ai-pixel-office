@@ -253,6 +253,7 @@ export function useExtensionMessages(
         });
         // Remove all sub-agent characters belonging to this agent
         os.removeAllSubagents(id);
+        os.removeGhostsForAgent(id);
         setSubagentCharacters((prev) => prev.filter((s) => s.parentAgentId !== id));
         os.removeAgent(id);
       } else if (msg.type === 'agentFolderUpdated') {

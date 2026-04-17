@@ -132,9 +132,12 @@ export function CharacterCustomizeModal({
       onClose={onClose}
       title="Настройка персонажа"
       zIndex={60}
-      className="min-w-[320px]"
+      className="min-w-[320px] max-w-[460px]"
     >
-      <div className="px-10 pb-8 flex flex-col gap-12">
+      <div
+        className="px-10 pb-8 flex flex-col gap-12"
+        style={{ maxHeight: '70vh', overflowY: 'auto' }}
+      >
         {/* Character palette — sprite previews */}
         <div className="flex flex-col gap-4">
           <span className="text-sm text-text-muted">Персонаж</span>

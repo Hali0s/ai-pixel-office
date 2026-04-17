@@ -165,12 +165,20 @@ function App() {
 
   // Open character customization modal on agent click (instead of directly focusing terminal)
   const handleClick = useCallback((agentId: number) => {
+    const ch = getOfficeState().characters.get(agentId);
+    if (ch?.ghostOf !== undefined) {
+      // Ghost sub-agent: focus parent terminal instead of opening modal
+      vscode.postMessage({ type: 'focusAgent', id: ch.ghostOf });
+      return;
+    }
     setCharacterModalAgentId(agentId);
     setIsCharacterModalOpen(true);
   }, []);
 
   // Context menu on right-click over a character
   const handleAgentContextMenu = useCallback((agentId: number, x: number, y: number) => {
+    const ch = getOfficeState().characters.get(agentId);
+    if (ch?.ghostOf !== undefined) return; // ghosts have no context menu
     setContextMenu({ agentId, x, y });
   }, []);
 
@@ -227,12 +235,36 @@ function App() {
   // Rename handler
   const handleRename = useCallback((agentId: number, name: string) => {
     const os = getOfficeState();
-    // Update display name in office state immediately
     const ch = os.characters.get(agentId);
     if (ch) {
       ch.customName = name || undefined;
     }
-    vscode.postMessage({ type: 'renameAgent', id: agentId, name });
+    // Persist all agent seats so customName survives reload
+    const seats: Record<
+      number,
+      {
+        palette: number;
+        hueShift: number;
+        seatId: string | null;
+        customName?: string;
+        isPanda?: boolean;
+        gender?: string;
+        idlePreference?: string;
+      }
+    > = {};
+    for (const c of os.characters.values()) {
+      if (c.isSubagent || c.ghostOf !== undefined) continue;
+      seats[c.id] = {
+        palette: c.palette,
+        hueShift: c.hueShift,
+        seatId: c.seatId,
+        customName: c.customName,
+        isPanda: c.isPanda,
+        gender: c.gender,
+        idlePreference: c.idlePreference,
+      };
+    }
+    vscode.postMessage({ type: 'saveAgentSeats', seats });
   }, []);
 
   // Focus terminal from inside the modal
@@ -275,7 +307,7 @@ function App() {
         }
       > = {};
       for (const ch of os.characters.values()) {
-        if (ch.isSubagent) continue;
+        if (ch.isSubagent || ch.ghostOf !== undefined) continue;
         seats[ch.id] = {
           palette: ch.palette,
           hueShift: ch.hueShift,

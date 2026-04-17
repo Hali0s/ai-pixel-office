@@ -1,4 +1,4 @@
-import { type MouseEvent, useEffect, useRef, useState } from 'react';
+import { type MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 import { PALETTE_COUNT } from '../constants.js';
 import type { WorkspaceFolder } from '../hooks/useExtensionMessages.js';
@@ -88,11 +88,35 @@ export function AgentLauncherModal({
   const [terminalLocation, setTerminalLocation] = useState<'panel' | 'editor' | 'claude-ui'>(
     'panel',
   );
+  const [sessions, setSessions] = useState<{ id: string; mtime: number }[]>([]);
+  const [resumeSessionId, setResumeSessionId] = useState<string | null>(null);
 
   // Keep local state in sync when global setting changes
   useEffect(() => {
     setBypassPermissions(defaultBypassPermissions);
   }, [defaultBypassPermissions]);
+
+  // Load session list when modal opens or folder changes
+  useEffect(() => {
+    if (!isOpen) return;
+    setSessions([]);
+    setResumeSessionId(null);
+    const msg: Record<string, unknown> = { type: 'requestRecentSessions' };
+    if (selectedFolder) msg.folderPath = selectedFolder;
+    vscode.postMessage(msg);
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === 'recentSessions') {
+        setSessions(
+          (e.data.sessions as { sessionId: string; mtime: number }[]).map((s) => ({
+            id: s.sessionId,
+            mtime: s.mtime,
+          })),
+        );
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [isOpen, selectedFolder]);
 
   const handleLaunch = () => {
     if (terminalLocation === 'claude-ui') {
@@ -104,6 +128,7 @@ export function AgentLauncherModal({
       if (selectedFolder) msg.folderPath = selectedFolder;
       if (bypassPermissions) msg.bypassPermissions = true;
       if (selectedPalette !== null) msg.initialPalette = selectedPalette;
+      if (resumeSessionId) msg.resumeSessionId = resumeSessionId;
       msg.terminalLocation = terminalLocation;
       vscode.postMessage(msg);
     }
@@ -113,8 +138,19 @@ export function AgentLauncherModal({
     setSelectedFolder(null);
     setBypassPermissions(false);
     setSelectedPalette(null);
+    setResumeSessionId(null);
     onClose();
   };
+
+  const formatRelativeTime = useCallback((mtime: number): string => {
+    const diffMs = Date.now() - mtime;
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'только что';
+    if (diffMin < 60) return `${diffMin} мин назад`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH} ч назад`;
+    return `${Math.floor(diffH / 24)} дн назад`;
+  }, []);
 
   const handleSelectTemplate = (tpl: AgentTemplate) => {
     if (selectedTemplate?.name === tpl.name) {
@@ -318,6 +354,41 @@ export function AgentLauncherModal({
                     }`}
                   >
                     {f.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Resume existing session */}
+          {sessions.length > 0 && (
+            <div className="flex flex-col gap-4">
+              <span className="text-sm text-text-muted">Возобновить сессию</span>
+              <div className="flex flex-col gap-2 max-h-[140px] overflow-y-auto pr-1">
+                <button
+                  onClick={() => setResumeSessionId(null)}
+                  className={`px-8 py-4 text-xs border-2 rounded-none cursor-pointer text-left ${
+                    resumeSessionId === null
+                      ? 'border-accent bg-active-bg text-text'
+                      : 'border-border bg-btn-bg text-text-muted hover:bg-btn-hover'
+                  }`}
+                >
+                  Новая сессия
+                </button>
+                {sessions.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setResumeSessionId(s.id)}
+                    className={`px-8 py-4 text-xs border-2 rounded-none cursor-pointer text-left flex justify-between gap-4 ${
+                      resumeSessionId === s.id
+                        ? 'border-accent bg-active-bg text-text'
+                        : 'border-border bg-btn-bg text-text-muted hover:bg-btn-hover'
+                    }`}
+                  >
+                    <span className="font-mono truncate">{s.id.slice(0, 8)}…</span>
+                    <span style={{ color: 'var(--color-text-muted)', flexShrink: 0 }}>
+                      {formatRelativeTime(s.mtime)}
+                    </span>
                   </button>
                 ))}
               </div>

@@ -465,6 +465,7 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
         const bypass = globalBypass || (message.bypassPermissions as boolean | undefined);
         const initialPalette = message.initialPalette as number | undefined;
         const terminalLocation = message.terminalLocation as 'panel' | 'editor' | undefined;
+        const resumeSessionId = message.resumeSessionId as string | undefined;
         await launchNewTerminal(
           this.nextAgentId,
           this.nextTerminalIndex,
@@ -484,6 +485,7 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
           message.initialPrompt as string | undefined,
           initialPalette,
           terminalLocation,
+          resumeSessionId,
         );
         // Register newly created agent(s) with hook handler
         for (const [id, agent] of this.agents) {
@@ -491,6 +493,25 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
             this.registerAgentHook(agent);
           }
         }
+      } else if (message.type === 'requestSessionList') {
+        const folderPath = message.folderPath as string | undefined;
+        const cwd = folderPath || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        const projectDir = getProjectDirPath(cwd);
+        const activeSessionIds = new Set(
+          [...this.agents.values()].map((a) => a.sessionId).filter(Boolean),
+        );
+        const sessions: { id: string; mtime: number }[] = [];
+        if (fs.existsSync(projectDir)) {
+          const files = fs.readdirSync(projectDir).filter((f: string) => f.endsWith('.jsonl'));
+          for (const f of files) {
+            const id = path.basename(f, '.jsonl');
+            if (activeSessionIds.has(id)) continue;
+            const stat = fs.statSync(path.join(projectDir, f));
+            sessions.push({ id, mtime: stat.mtimeMs });
+          }
+          sessions.sort((a, b) => b.mtime - a.mtime);
+        }
+        webviewView.webview.postMessage({ type: 'sessionList', sessions });
       } else if (message.type === 'openClaudeUI') {
         try {
           await vscode.commands.executeCommand('claude-vscode.newConversation');
@@ -511,6 +532,27 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
               lead.terminalRef.show();
             }
           }
+        }
+      } else if (message.type === 'requestRecentSessions') {
+        try {
+          const projectDir = getProjectDirPath(message.folderPath as string | undefined);
+          const trackedFiles = new Set([...this.agents.values()].map((a) => a.jsonlFile));
+          const files = fs.existsSync(projectDir)
+            ? fs
+                .readdirSync(projectDir)
+                .filter((f) => f.endsWith('.jsonl'))
+                .map((f) => {
+                  const full = path.join(projectDir, f);
+                  const stat = fs.statSync(full);
+                  return { sessionId: f.replace('.jsonl', ''), mtime: stat.mtimeMs, file: full };
+                })
+                .filter((f) => !trackedFiles.has(f.file))
+                .sort((a, b) => b.mtime - a.mtime)
+                .slice(0, 10)
+            : [];
+          webviewView.webview.postMessage({ type: 'recentSessions', sessions: files });
+        } catch {
+          webviewView.webview.postMessage({ type: 'recentSessions', sessions: [] });
         }
       } else if (message.type === 'requestAgentsList') {
         const list = Array.from(this.agents.entries())

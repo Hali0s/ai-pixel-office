@@ -103,8 +103,12 @@ export function ToolOverlay({
   const selectedId = officeState.selectedAgentId;
   const hoveredId = officeState.hoveredAgentId;
 
-  // All character IDs
-  const allIds = [...agents, ...subagentCharacters.map((s) => s.id)];
+  // All character IDs — regular agents, active sub-agents, and ghost wanderers
+  const allIds = [
+    ...agents,
+    ...subagentCharacters.map((s) => s.id),
+    ...officeState.ghostSubagents.keys(),
+  ];
 
   return (
     <>
@@ -115,9 +119,12 @@ export function ToolOverlay({
         const isSelected = selectedId === id;
         const isHovered = hoveredId === id;
         const isSub = ch.isSubagent;
+        const isGhost = ch.ghostOf !== undefined;
 
         // Only show for hovered or selected agents (unless always-show is on)
-        if (!alwaysShowOverlay && !isSelected && !isHovered) return null;
+        // Ghosts only show on hover — never on alwaysShowOverlay
+        if (isGhost && !isHovered) return null;
+        if (!isGhost && !alwaysShowOverlay && !isSelected && !isHovered) return null;
 
         // Position above character
         const sittingOffset = ch.state === CharacterState.TYPE ? CHARACTER_SITTING_OFFSET_PX : 0;
@@ -128,7 +135,9 @@ export function ToolOverlay({
         // Get activity text
         const subHasPermission = isSub && ch.bubbleType === 'permission';
         let activityText: string;
-        if (isSub) {
+        if (isGhost) {
+          activityText = 'Subtask done';
+        } else if (isSub) {
           if (subHasPermission) {
             activityText = 'Needs approval';
           } else {
@@ -173,7 +182,13 @@ export function ToolOverlay({
               left: screenX,
               top: screenY - (hasExtraLines ? 34 : 28),
               pointerEvents: isSelected ? 'auto' : 'none',
-              opacity: alwaysShowOverlay && !isSelected && !isHovered ? (isSub ? 0.5 : 0.75) : 1,
+              opacity: isGhost
+                ? 0.7
+                : alwaysShowOverlay && !isSelected && !isHovered
+                  ? isSub
+                    ? 0.5
+                    : 0.75
+                  : 1,
               zIndex: isSelected ? 42 : 41,
             }}
           >
@@ -200,8 +215,9 @@ export function ToolOverlay({
                 <span
                   className="overflow-hidden text-ellipsis block leading-none"
                   style={{
-                    fontSize: isSub ? '20px' : '22px',
-                    fontStyle: isSub ? 'italic' : undefined,
+                    fontSize: isSub || isGhost ? '20px' : '22px',
+                    fontStyle: isSub || isGhost ? 'italic' : undefined,
+                    color: isGhost ? 'var(--color-text-muted)' : undefined,
                   }}
                 >
                   {displayActivity}
@@ -212,7 +228,7 @@ export function ToolOverlay({
                   </span>
                 )}
               </div>
-              {isSelected && !isSub && (
+              {isSelected && !isSub && !isGhost && (
                 <Button
                   variant="ghost"
                   size="icon"
