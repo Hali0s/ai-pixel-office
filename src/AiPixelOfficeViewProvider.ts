@@ -467,6 +467,7 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
         const terminalLocation = message.terminalLocation as 'panel' | 'editor' | undefined;
         const resumeSessionId = message.resumeSessionId as string | undefined;
         const templateName = message.templateName as string | undefined;
+        const resumeCustomName = message.resumeCustomName as string | undefined;
         await launchNewTerminal(
           this.nextAgentId,
           this.nextTerminalIndex,
@@ -488,6 +489,7 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
           terminalLocation,
           resumeSessionId,
           templateName,
+          resumeCustomName,
         );
         // Register newly created agent(s) with hook handler
         for (const [id, agent] of this.agents) {
@@ -539,11 +541,20 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
         try {
           const projectDir = getProjectDirPath(message.folderPath as string | undefined);
           const trackedFiles = new Set([...this.agents.values()].map((a) => a.jsonlFile));
-          // Build a map of sessionId → customName from persisted agents
-          const persisted = this.context.workspaceState.get<
-            { sessionId?: string; customName?: string }[]
-          >('ai-pixel-office.agents', []);
-          const nameMap = new Map(persisted.map((p) => [p.sessionId, p.customName]));
+          // Build a map of sessionId → customName
+          // customName lives in WORKSPACE_KEY_AGENT_SEATS keyed by agent id
+          const persisted = this.context.workspaceState.get<{ id: number; sessionId?: string }[]>(
+            'ai-pixel-office.agents',
+            [],
+          );
+          const agentMeta = this.context.workspaceState.get<
+            Record<string, { customName?: string }>
+          >(WORKSPACE_KEY_AGENT_SEATS, {});
+          const nameMap = new Map(
+            persisted
+              .filter((p) => p.sessionId)
+              .map((p) => [p.sessionId!, agentMeta[String(p.id)]?.customName]),
+          );
           const files = fs.existsSync(projectDir)
             ? fs
                 .readdirSync(projectDir)

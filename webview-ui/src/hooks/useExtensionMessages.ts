@@ -231,6 +231,7 @@ export function useExtensionMessages(
           if (ch) {
             if (msg.initialPrompt) ch.initialPrompt = msg.initialPrompt as string;
             if (msg.templateName) ch.templateName = msg.templateName as string;
+            if (msg.customName) ch.customName = msg.customName as string;
           }
         }
         saveAgentSeats(os);

@@ -129,7 +129,11 @@ export function AgentLauncherModal({
       if (selectedFolder) msg.folderPath = selectedFolder;
       if (bypassPermissions) msg.bypassPermissions = true;
       if (selectedPalette !== null) msg.initialPalette = selectedPalette;
-      if (resumeSessionId) msg.resumeSessionId = resumeSessionId;
+      if (resumeSessionId) {
+        msg.resumeSessionId = resumeSessionId;
+        const resumedSession = sessions.find((s) => s.id === resumeSessionId);
+        if (resumedSession?.customName) msg.resumeCustomName = resumedSession.customName;
+      }
       if (selectedTemplate) msg.templateName = selectedTemplate.name;
       msg.terminalLocation = terminalLocation;
       vscode.postMessage(msg);

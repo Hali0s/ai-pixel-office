@@ -81,6 +81,7 @@ export async function launchNewTerminal(
   terminalLocation?: 'panel' | 'editor',
   resumeSessionId?: string,
   templateName?: string,
+  resumeCustomName?: string,
 ): Promise<void> {
   const folders = vscode.workspace.workspaceFolders;
   // Use home directory as fallback cwd when no workspace is open (common on Linux/macOS).
@@ -172,6 +173,7 @@ export async function launchNewTerminal(
   if (initialPalette !== undefined) createdMsg.initialPalette = initialPalette;
   if (initialPrompt) createdMsg.initialPrompt = initialPrompt;
   if (templateName) createdMsg.templateName = templateName;
+  if (resumeCustomName) createdMsg.customName = resumeCustomName;
   webview?.postMessage(createdMsg);
 
   ensureProjectScan(
