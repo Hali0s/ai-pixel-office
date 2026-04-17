@@ -512,6 +512,9 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
             }
           }
         }
+      } else if (message.type === 'hideAgent') {
+        // Remove character from webview but keep terminal/session alive
+        webviewView.webview.postMessage({ type: 'agentClosed', id: message.id });
       } else if (message.type === 'closeAgent') {
         const agent = this.agents.get(message.id);
         if (agent) {

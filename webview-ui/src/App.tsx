@@ -195,6 +195,11 @@ function App() {
     void navigator.clipboard.writeText(String(agentId)).catch(() => undefined);
   }, []);
 
+  // Context menu action: hide character (terminal keeps running)
+  const handleContextMenuHideAgent = useCallback((agentId: number) => {
+    vscode.postMessage({ type: 'hideAgent', id: agentId });
+  }, []);
+
   // Context menu action: close/terminate agent
   const handleContextMenuCloseAgent = useCallback((agentId: number) => {
     vscode.postMessage({ type: 'closeAgent', id: agentId });
@@ -555,10 +560,15 @@ function App() {
           x={contextMenu.x}
           y={contextMenu.y}
           agentId={contextMenu.agentId}
+          folderPath={(() => {
+            const ch = getOfficeState().characters.get(contextMenu.agentId);
+            return ch?.folderName;
+          })()}
           onClose={handleContextMenuClose}
           onSendMessage={handleContextMenuSendMessage}
           onCustomize={handleContextMenuCustomize}
           onCopySessionId={handleContextMenuCopySessionId}
+          onHideAgent={handleContextMenuHideAgent}
           onCloseAgent={handleContextMenuCloseAgent}
           onRename={handleContextMenuRename}
         />

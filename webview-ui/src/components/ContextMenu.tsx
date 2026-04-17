@@ -4,10 +4,12 @@ interface ContextMenuProps {
   x: number;
   y: number;
   agentId: number;
+  folderPath?: string;
   onClose: () => void;
   onSendMessage: (agentId: number) => void;
   onCustomize: (agentId: number) => void;
   onCopySessionId: (agentId: number) => void;
+  onHideAgent: (agentId: number) => void;
   onCloseAgent: (agentId: number) => void;
   onRename: (agentId: number) => void;
 }
@@ -16,10 +18,12 @@ export function ContextMenu({
   x,
   y,
   agentId,
+  folderPath,
   onClose,
   onSendMessage,
   onCustomize,
   onCopySessionId,
+  onHideAgent,
   onCloseAgent,
   onRename,
 }: ContextMenuProps) {
@@ -27,7 +31,7 @@ export function ContextMenu({
 
   // Adjust position so menu doesn't overflow viewport
   const MENU_W = 200;
-  const MENU_H = 180;
+  const MENU_H = 220;
   const adjustedX = Math.min(x, window.innerWidth - MENU_W - 8);
   const adjustedY = Math.min(y, window.innerHeight - MENU_H - 8);
 
@@ -138,13 +142,38 @@ export function ContextMenu({
         <span>📋</span> Копировать Session ID
       </button>
 
-      <div
-        style={{
-          height: 1,
-          background: 'var(--color-border)',
-          margin: '3px 10px',
+      {folderPath && (
+        <>
+          <div style={{ height: 1, background: 'var(--color-border)', margin: '3px 10px' }} />
+          <div
+            style={{
+              ...itemStyle,
+              fontSize: 10,
+              color: 'var(--color-text-muted)',
+              cursor: 'default',
+              opacity: 0.7,
+            }}
+            title={folderPath}
+          >
+            📁 {folderPath.split(/[/\\]/).pop() ?? folderPath}
+          </div>
+        </>
+      )}
+
+      <div style={{ height: 1, background: 'var(--color-border)', margin: '3px 10px' }} />
+
+      <button
+        style={itemStyle}
+        onClick={handleItem(() => onHideAgent(agentId))}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.background = 'var(--color-accent)';
         }}
-      />
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+        }}
+      >
+        <span>👻</span> Скрыть персонажа
+      </button>
 
       <button
         style={{ ...itemStyle, color: 'var(--color-danger-light)' }}

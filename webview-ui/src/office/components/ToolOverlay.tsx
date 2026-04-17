@@ -206,7 +206,7 @@ export function ToolOverlay({
                 >
                   {displayActivity}
                 </span>
-                {ch.folderName && (
+                {ch.folderName && !ch.customName && (
                   <span className="text-2xs leading-none overflow-hidden text-ellipsis block">
                     {ch.folderName}
                   </span>
