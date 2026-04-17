@@ -491,6 +491,15 @@ export class AiPixelOfficeViewProvider implements vscode.WebviewViewProvider {
             this.registerAgentHook(agent);
           }
         }
+      } else if (message.type === 'openClaudeUI') {
+        try {
+          await vscode.commands.executeCommand('claude-vscode.editor.open');
+          await vscode.commands.executeCommand('claude-vscode.newConversation');
+        } catch {
+          vscode.window.showErrorMessage(
+            'Не удалось открыть Claude Code UI. Убедитесь, что расширение Claude Code установлено.',
+          );
+        }
       } else if (message.type === 'focusAgent') {
         const agent = this.agents.get(message.id);
         if (agent) {
